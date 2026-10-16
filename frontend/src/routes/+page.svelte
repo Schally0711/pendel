@@ -21,7 +21,8 @@
 		Play,
 		Scale,
 		CalendarRange,
-		TriangleAlert
+		TriangleAlert,
+		Zap
 	} from '@lucide/svelte';
 
 	let today = $state<Today | null>(null);
@@ -149,7 +150,7 @@
 	const KIND_LABEL = $derived({ home: m.kind_home(), office: m.kind_office(), other: m.kind_other() });
 	const KIND_DOT = { home: 'bg-home', office: 'bg-office', other: 'bg-brand-500' };
 
-	type Entry = { start: string; end: string | null; label: string; minutes: number; dot: string };
+	type Entry = { start: string; end: string | null; label: string; minutes: number; dot: string; auto?: boolean };
 	const entries: Entry[] = $derived(
 		[
 			...commutes.map((c) => ({
@@ -157,14 +158,16 @@
 				end: c.end,
 				label: c.direction === 'to_work' ? m.commute_to_work() : m.commute_from_work(),
 				minutes: minutesBetween(c.start, c.end, now),
-				dot: 'bg-travel'
+				dot: 'bg-travel',
+				auto: c.source === 'automatic'
 			})),
 			...sessions.map((s) => ({
 				start: s.start,
 				end: s.end,
 				label: KIND_LABEL[s.kind],
 				minutes: minutesBetween(s.start, s.end, now),
-				dot: KIND_DOT[s.kind]
+				dot: KIND_DOT[s.kind],
+				auto: s.source === 'automatic'
 			})),
 			...sessions.flatMap((s) =>
 				s.breaks.map((b) => ({
@@ -331,6 +334,7 @@
 						<li class="flex items-center gap-3 py-2.5 text-sm">
 							<span class="size-2.5 shrink-0 rounded-full {e.dot}"></span>
 							<span class="font-medium">{e.label}</span>
+							{#if e.auto}<Zap class="size-3.5 text-brand-500" aria-label={m.automatic()} />{/if}
 							<span class="muted tabular-nums">
 								{localTime(e.start, tz)} – {e.end ? localTime(e.end, tz) : m.running()}
 							</span>

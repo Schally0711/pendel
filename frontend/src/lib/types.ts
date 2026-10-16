@@ -173,3 +173,22 @@ export interface VacationAccount {
 	remaining: number;
 	suggested_carry_over: number;
 }
+
+export interface ApiTokenInfo {
+	id: number;
+	name: string;
+	created_at: string;
+	last_used_at: string | null;
+	revoked_at: string | null;
+	token?: string;
+}
+
+export interface PendelEvent {
+	id: number;
+	occurred_at: string;
+	received_at: string;
+	type: string;
+	zone: string | null;
+	payload: { actions?: string[]; source?: string };
+	processed: boolean;
+}

@@ -5,11 +5,11 @@
 	import { auth } from '#lib/session.svelte.js';
 	import { errorText } from '#lib/errors.js';
 	import { addDays, formatDate, hm, localDate, localTime, zonedToIso } from '#lib/time.js';
-	import type { Break, Commute, Day, DayKind, Place, PlaceKind, WorkSession } from '#lib/types.js';
-	import { DAY_KINDS, dayKindLabel } from '#lib/labels.js';
+	import type { Break, Commute, Day, DayKind, PendelEvent, Place, PlaceKind, WorkSession } from '#lib/types.js';
+	import { DAY_KINDS, actionLabel, dayKindLabel } from '#lib/labels.js';
 	import Modal from './Modal.svelte';
 	import Alert from './Alert.svelte';
-	import { Plus, Trash2, Car, Coffee } from '@lucide/svelte';
+	import { Plus, Trash2, Car, Coffee, Radio, TriangleAlert, Zap } from '@lucide/svelte';
 
 	let {
 		day,
@@ -21,14 +21,16 @@
 	const tz = $derived(auth.tz);
 	let sessions = $state<WorkSession[]>([]);
 	let commutes = $state<Commute[]>([]);
+	let events = $state<PendelEvent[]>([]);
 	let entry = $state<DayKind | ''>('');
 	let error = $state<string | null>(null);
 
 	async function load() {
 		const range = { from: day.day, to: day.day };
-		[sessions, commutes] = await Promise.all([
+		[sessions, commutes, events] = await Promise.all([
 			api.get<WorkSession[]>('/sessions', range),
-			api.get<Commute[]>('/commutes', range)
+			api.get<Commute[]>('/commutes', range),
+			api.get<PendelEvent[]>('/events', range)
 		]);
 	}
 
@@ -128,6 +130,12 @@
 	);
 </script>
 
+{#snippet auto()}
+	<span class="inline-flex items-center gap-1 rounded-md bg-brand-50 px-1.5 py-0.5 text-[10px] font-medium text-brand-700 dark:bg-brand-900/40 dark:text-brand-300">
+		<Zap class="size-3" />{m.automatic()}
+	</span>
+{/snippet}
+
 {#snippet times(start: string, end: string | null, save: (start: string, end: string | null) => void)}
 	<div class="flex items-center gap-2">
 		<input
@@ -204,6 +212,7 @@
 								{#each kinds as k (k)}<option value={k}>{kindLabel(k)}</option>{/each}
 							</select>
 							{@render times(s.start, s.end, (start, end) => patchSession(s, { start, ...(end ? { end } : {}) }))}
+							{#if s.source === 'automatic'}{@render auto()}{/if}
 							<button
 								class="btn-danger ml-auto p-1.5"
 								aria-label={m.delete()}
@@ -212,6 +221,11 @@
 								<Trash2 class="size-4" />
 							</button>
 						</div>
+						{#if s.note.includes('[end_estimated]')}
+							<p class="flex items-center gap-1.5 px-3 pb-2 text-xs text-amber-700 dark:text-amber-400">
+								<TriangleAlert class="size-3.5" />{m.end_estimated()}
+							</p>
+						{/if}
 						<div class="space-y-2 border-t border-slate-100 p-3 dark:border-slate-800">
 							{#each s.breaks as b (b.id)}
 								<div class="flex flex-wrap items-center gap-2 text-sm">
@@ -267,6 +281,7 @@
 							{c.direction === 'to_work' ? m.commute_to_work() : m.commute_from_work()}
 						</span>
 						{@render times(c.start, c.end, (start, end) => saveCommute(c, { start, end }))}
+						{#if c.source === 'automatic'}{@render auto()}{/if}
 						<button
 							class="btn-danger ml-auto p-1.5"
 							aria-label={m.delete()}
@@ -278,6 +293,23 @@
 				{/each}
 			</div>
 		</section>
+
+		{#if events.length}
+			<section>
+				<h3 class="mb-2 flex items-center gap-1.5 text-sm font-semibold"><Radio class="size-4" />{m.event_log()}</h3>
+				<ul class="space-y-1 text-xs">
+					{#each events as ev (ev.id)}
+						<li class="flex gap-2">
+							<span class="w-10 shrink-0 tabular-nums muted">{localTime(ev.occurred_at, tz)}</span>
+							<span class="shrink-0 font-medium">
+								{ev.zone} {ev.type === 'zone_enter' ? m.event_zone_enter() : m.event_zone_leave()}
+							</span>
+							<span class="muted">→ {(ev.payload.actions ?? []).map(actionLabel).join(', ')}</span>
+						</li>
+					{/each}
+				</ul>
+			</section>
+		{/if}
 
 		<Alert message={error} />
 	</div>

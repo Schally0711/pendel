@@ -46,6 +46,22 @@ On first visit you create the admin account; further people join via invitation 
 
 Pendel is a PWA: on Android open it in Chrome and choose "Install app".
 
+## Automation (Home Assistant & co.)
+
+Create an API token under *Settings → Integrations* (or on the server: `/opt/pendel/venv/bin/python -m pendel.cli create-token <email> <name>`),
+set the zone names of your places (e.g. home = `home`, office = `Work`), then send location events:
+
+```http
+POST /api/events
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{"type": "zone_change", "from": "home", "to": "not_home", "at": "2026-10-14T07:18:00+02:00"}
+```
+
+`zone_enter` / `zone_leave` with `"zone": "..."` work as well. Pendel derives commutes, office time and breaks
+(absences from the office up to 90 min = break, longer = work). The settings page shows ready-to-paste Home Assistant YAML.
+
 ## Container
 
 ```bash

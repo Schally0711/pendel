@@ -348,3 +348,53 @@ class AllowanceIn(BaseModel):
 class AbsencesOut(BaseModel):
     account: VacationAccountOut
     periods: list[PeriodOut]
+
+
+# --- automation ---
+
+
+class EventIn(BaseModel):
+    """Location event from an automation.
+
+    Either `type` zone_enter/zone_leave with `zone`, or `type` zone_change with `from`/`to`
+    (e.g. Home Assistant person states like "home", "not_home", "Arbeit").
+    """
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    type: str = Field(pattern=r"^(zone_enter|zone_leave|zone_change)$")
+    zone: str | None = Field(default=None, max_length=100)
+    from_zone: str | None = Field(default=None, alias="from", max_length=100)
+    to_zone: str | None = Field(default=None, alias="to", max_length=100)
+    at: AwareDatetime | None = None
+    source: str = Field(default="", max_length=50)
+
+
+class EventOut(Out):
+    id: int
+    occurred_at: datetime
+    received_at: datetime
+    type: str
+    zone: str | None
+    payload: dict
+    processed: bool
+
+
+class EventResult(BaseModel):
+    events: list[EventOut]
+
+
+class TokenCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=100)
+
+
+class TokenOut(Out):
+    id: int
+    name: str
+    created_at: datetime
+    last_used_at: datetime | None
+    revoked_at: datetime | None
+
+
+class TokenCreated(TokenOut):
+    token: str  # shown only once

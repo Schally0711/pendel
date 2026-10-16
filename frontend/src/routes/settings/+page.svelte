@@ -8,6 +8,7 @@
 	import { formatDate, localDate, signedHm } from '#lib/time.js';
 	import type { Adjustment, Place, PlaceKind, Subdivision, User, WorkModel } from '#lib/types.js';
 	import Alert from '#lib/components/Alert.svelte';
+	import Integrations from '#lib/components/Integrations.svelte';
 	import { Plus, Trash2 } from '@lucide/svelte';
 
 	type Status = { message: string | null; tone: 'error' | 'success' };
@@ -346,6 +347,8 @@
 						<input
 							id="pz{p.id}"
 							class="input"
+							placeholder={p.kind === 'home' ? 'home' : 'Arbeit'}
+							title={m.zone_hint()}
 							value={p.zone ?? ''}
 							onchange={(e) => {
 								p.zone = e.currentTarget.value || null;
@@ -364,6 +367,8 @@
 			<Alert message={status.places?.message ?? null} tone={status.places?.tone} />
 		</div>
 	</section>
+
+	<Integrations />
 
 	<!-- Adjustments -->
 	<section class="card">

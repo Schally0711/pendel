@@ -69,3 +69,24 @@ export const DAY_DOT: Record<DayKind, string> = {
 
 export const placeKindLabel = (k: PlaceKind) =>
 	k === 'home' ? m.kind_home() : k === 'office' ? m.kind_office() : m.kind_other();
+
+const ACTIONS: Record<string, () => string> = {
+	commute_to_work_started: m.act_commute_to_work_started,
+	commute_to_work_ended: m.act_commute_to_work_ended,
+	commute_to_work_discarded: m.act_commute_to_work_discarded,
+	commute_from_work_recorded: m.act_commute_from_work_recorded,
+	commute_from_work_ended: m.act_commute_from_work_ended,
+	commute_from_work_discarded: m.act_commute_from_work_discarded,
+	office_session_started: m.act_office_session_started,
+	office_session_ended: m.act_office_session_ended,
+	home_session_ended: m.act_home_session_ended,
+	office_gap_started: m.act_office_gap_started,
+	gap_closed_break: m.act_gap_closed_break,
+	gap_closed_work: m.act_gap_closed_work,
+	gap_dropped_jitter: m.act_gap_dropped_jitter,
+	ignored_no_workday: m.act_ignored_no_workday,
+	ignored_unknown_zone: m.act_ignored_unknown_zone,
+	no_change: m.act_no_change
+};
+
+export const actionLabel = (a: string) => ACTIONS[a]?.() ?? a;
