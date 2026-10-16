@@ -1,6 +1,7 @@
 """Day-by-day evaluation of a user's data and the resulting flexitime balance."""
 
 from collections import defaultdict
+from dataclasses import dataclass, field
 from datetime import UTC, date, datetime, time, timedelta
 from zoneinfo import ZoneInfo
 
@@ -9,11 +10,20 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
 from .calc import BreakSpan, DayResult, Rules, SessionSpan, Span, evaluate_day, target_minutes
-from .models import BalanceAdjustment, Commute, DayEntry, User, WorkModel, WorkSession
+from .models import BalanceAdjustment, Commute, DayEntry, DayKind, PlaceKind, User, WorkModel, WorkSession
+
+
+@dataclass
+class DayReport:
+    result: DayResult
+    holiday: str | None = None
+    entry: DayKind | None = None
+    kinds: list[PlaceKind] = field(default_factory=list)  # where work happened
 
 
 def holiday_calendar(user: User, years: range) -> holidays.HolidayBase:
-    return holidays.country_holidays(user.country, subdiv=user.subdivision, years=years)
+    language = "en_US" if user.locale == "en" else None  # None = country default (German for DE)
+    return holidays.country_holidays(user.country, subdiv=user.subdivision, years=years, language=language)
 
 
 def _utc_bounds(start: date, end: date, tz: ZoneInfo) -> tuple[datetime, datetime]:
@@ -46,6 +56,13 @@ def evaluate_range(
     db: Session, user: User, start: date, end: date, now: datetime | None = None
 ) -> list[DayResult]:
     """Evaluate every day in [start, end]. Days before the first work model have no target."""
+    return [d.result for d in evaluate_days(db, user, start, end, now)]
+
+
+def evaluate_days(
+    db: Session, user: User, start: date, end: date, now: datetime | None = None
+) -> list[DayReport]:
+    """Like `evaluate_range`, with holiday names, day entries and work locations."""
     now = now or datetime.now(UTC)
     tz = ZoneInfo(user.timezone)
     lo, hi = _utc_bounds(start, end, tz)
@@ -60,13 +77,17 @@ def evaluate_range(
         )
     }
     sessions: dict[date, list[SessionSpan]] = defaultdict(list)
+    kinds: dict[date, list[PlaceKind]] = defaultdict(list)
     for s in db.scalars(
         select(WorkSession)
         .where(WorkSession.user_id == user.id, WorkSession.start >= lo, WorkSession.start < hi)
         .options(selectinload(WorkSession.breaks))
     ):
         breaks = tuple(BreakSpan(b.start, b.end, b.deducted) for b in s.breaks)
-        sessions[s.start.astimezone(tz).date()].append(SessionSpan(s.start, s.end, breaks))
+        local_day = s.start.astimezone(tz).date()
+        sessions[local_day].append(SessionSpan(s.start, s.end, breaks))
+        if s.kind not in kinds[local_day]:
+            kinds[local_day].append(s.kind)
     commutes: dict[date, list[Span]] = defaultdict(list)
     for c in db.scalars(
         select(Commute).where(Commute.user_id == user.id, Commute.start >= lo, Commute.start < hi)
@@ -79,8 +100,11 @@ def evaluate_range(
     while day <= end:
         model = _active_model(models, day)
         base = model.target_minutes_for_weekday(day.weekday()) if model else 0
-        target = target_minutes(base, is_holiday=day in cal, entry=entries.get(day))
-        results.append(evaluate_day(day, target, sessions[day], commutes[day], _rules(model), now))
+        holiday = cal.get(day)
+        entry = entries.get(day)
+        target = target_minutes(base, is_holiday=holiday is not None, entry=entry)
+        result = evaluate_day(day, target, sessions[day], commutes[day], _rules(model), now)
+        results.append(DayReport(result, holiday, entry, kinds[day]))
         day += timedelta(days=1)
     return results
 

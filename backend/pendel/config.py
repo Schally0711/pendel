@@ -13,6 +13,8 @@ class Settings(BaseSettings):
     database_url: str | None = None
     # Directory with the built SvelteKit SPA; served at / when it exists.
     static_dir: Path = Path("../frontend/build")
+    # Set to false only for plain-HTTP setups without a TLS reverse proxy
+    secure_cookies: bool = True
 
     @property
     def effective_database_url(self) -> str:
