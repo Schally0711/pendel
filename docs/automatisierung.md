@@ -47,12 +47,14 @@ Danach meldet Home Assistant Zonenwechsel der Person an Pendel. Die Integration 
 Meldungen; normale Standortpunkte verwirft es sofort, Koordinaten werden nicht gespeichert.
 
 1. OwnTracks aus dem Play Store bzw. App Store installieren.
-2. In Pendel unter **Einstellungen → Integrationen → OwnTracks** auf *Zugang für OwnTracks erstellen* tippen und
+2. **Nur iPhone:** In OwnTracks unter *Einstellungen* den Schalter **„Allow external configuration“** einschalten.
+   Ohne ihn lehnt die iOS-App jede Konfiguration per Link ab („URI or file configuration not allowed“).
+3. In Pendel unter **Einstellungen → Integrationen → OwnTracks** auf *Zugang für OwnTracks erstellen* tippen und
    den QR-Code mit dem Handy scannen (oder am Handy *In OwnTracks öffnen*). OwnTracks übernimmt Modus, Adresse und
    Zugangsdaten.
-3. In OwnTracks unter *Regionen* Regionen mit **genau den Namen deiner Pendel-Orte** anlegen (z. B. „Zuhause“, „Büro“).
+4. In OwnTracks unter *Regionen* Regionen mit **genau den Namen deiner Pendel-Orte** anlegen (z. B. „Zuhause“, „Büro“).
    Ein Radius von 100–200 m funktioniert gut.
-4. Standortzugriff *Immer erlauben* und OwnTracks von der Akku-Optimierung ausnehmen.
+5. Standortzugriff *Immer erlauben* und OwnTracks von der Akku-Optimierung ausnehmen.
 
 Manuelle Einrichtung: Modus *HTTP*, URL `https://<deine-pendel-adresse>/api/owntracks`, Authentifizierung an,
 Benutzer beliebig (z. B. `pendel`), Passwort = ein API-Token aus Pendel.

@@ -363,7 +363,7 @@
 	"ot_setup": "OwnTracks (Android & iOS)",
 	"ot_text": "The free OwnTracks app tells Pendel when you enter or leave a region such as home or office. Pendel only stores these events, no location data.",
 	"ot_step_install": "Install OwnTracks from the Play Store or App Store.",
-	"ot_step_token": "Create an access below and scan the QR code with your phone camera (or open the link on the phone) – OwnTracks takes over the settings.",
+	"ot_step_token": "Create an access below and scan the QR code with your phone camera (or open the link on the phone) – OwnTracks takes over the settings. On iPhone, first turn on “Allow external configuration” in the OwnTracks settings, otherwise the app reports “URI or file configuration not allowed”.",
 	"ot_step_regions": "In OwnTracks, add regions under “Regions” with exactly these names: {names}. A radius of 100–200 m works well.",
 	"ot_step_permission": "Allow location access “all the time” and exclude OwnTracks from battery optimisation so events arrive in the background.",
 	"ot_create": "Create access for OwnTracks",

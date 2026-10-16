@@ -2,6 +2,10 @@
 
 Alle nennenswerten Änderungen pro Version. Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [Unveröffentlicht]
+
+- OwnTracks-Einrichtung: Hinweis für iOS – vor dem Scannen in OwnTracks „Allow external configuration“ einschalten
+
 ## [0.9.1] – 2026-10-16 (Beta)
 
 ### Neu
