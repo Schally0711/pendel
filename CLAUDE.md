@@ -23,8 +23,9 @@ Pendel is a self-hosted work time tracker (home office vs. office days, commute 
 ## Frontend structure
 
 - Imports use Node subpath imports `#lib/...` (SvelteKit 3; no `$lib`). TS modules need the `.js` suffix (`#lib/api.js`), components the `.svelte` suffix.
+- `lib/labels.ts` holds labels/colours for day and place kinds – use it instead of local maps.
 - `lib/api.ts` (fetch wrapper, redirects to /login on 401), `lib/session.svelte.ts` (current user, rune state), `lib/time.ts` (all date math in the *user's* time zone: `zonedToIso`, `localDate`, `localTime`), `lib/types.ts` mirrors `schemas.py`.
-- Routes: `/` today (clock actions, live timer), `/history` month view + `DayEditor` modal, `/settings`, `/admin`, public `/login`, `/setup`, `/invite/[token]`. The root layout gates non-public routes.
+- Routes: `/` today (clock actions, live timer), `/history` month view + `DayEditor` modal, `/absences` (vacation account, range entry with dry-run preview, year calendar), `/settings`, `/admin`, public `/login`, `/setup`, `/invite/[token]`. The root layout gates non-public routes.
 - Styling: Tailwind 4 with custom utilities (`card`, `btn-*`, `input`, `label`, `muted`) defined via `@utility` in `routes/layout.css` (Tailwind 4 cannot `@apply` classes from `@layer components`). Brand colors `brand-*`, place colors `home`/`office`/`travel`. Dark mode follows the OS.
 - Local cookies: run the backend with `PENDEL_SECURE_COOKIES=false` when testing over plain HTTP on a non-localhost address.
 
@@ -34,6 +35,7 @@ Pendel is a self-hosted work time tracker (home office vs. office days, commute 
 - `calc.py` – pure accounting rules on plain dataclasses, no DB: day target (holidays/vacation/sick are neutral, flex days keep the target), break handling (`manual` vs. `auto` = fixed daily break, longer recorded breaks win; breaks with `deducted = False` are recorded absences that count as work, e.g. customer visits; office gaps up to `office_gap_break_max_minutes` are breaks), ArbZG warnings, commute credit percentage.
 - `reports.py` – loads a user's data for a date range and feeds `calc.evaluate_day`; holidays via the `holidays` package (country + subdivision from the user). The flexitime balance is never stored: `balance()` = sum of `BalanceAdjustment` (opening balance, payouts) + daily diffs since the first `WorkModel`.
 - `WorkModel` rows are versioned by `valid_from`; the newest model not after a day applies to it, so contract changes keep past days correct.
+- Absences: `DayEntry` per day (`DayKind`); `models.NEUTRAL_DAY_KINDS` make a day neutral (target 0), `FLEX_DAY` keeps the target, `VACATION_HALF` halves it. `absences.py` books ranges only on workdays (target > 0 and no holiday, via `reports.schedule`, which falls back to the first work model for earlier days), groups entries into periods and computes the yearly `VacationAllowance` account (taken ≤ today, planned after).
 - `Event` stores raw automation events (zone enter/leave, …) for traceability; sessions/commutes are derived from them. `ApiToken` stores only token hashes.
 - Migrations live in `pendel/migrations` (shipped inside the package) and run automatically on startup (`db.migrate()`). After changing models: `PENDEL_DATA_DIR=/tmp/x .venv/bin/alembic upgrade head && PENDEL_DATA_DIR=/tmp/x .venv/bin/alembic revision --autogenerate -m "..."`, then review the generated file (`render_as_batch` is on for SQLite).
 

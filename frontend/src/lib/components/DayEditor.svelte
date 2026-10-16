@@ -6,6 +6,7 @@
 	import { errorText } from '#lib/errors.js';
 	import { addDays, formatDate, hm, localDate, localTime, zonedToIso } from '#lib/time.js';
 	import type { Break, Commute, Day, DayKind, Place, PlaceKind, WorkSession } from '#lib/types.js';
+	import { DAY_KINDS, dayKindLabel } from '#lib/labels.js';
 	import Modal from './Modal.svelte';
 	import Alert from './Alert.svelte';
 	import { Plus, Trash2, Car, Coffee } from '@lucide/svelte';
@@ -57,25 +58,6 @@
 	const kinds: PlaceKind[] = ['home', 'office', 'other'];
 	const kindLabel = (k: PlaceKind) =>
 		k === 'home' ? m.kind_home() : k === 'office' ? m.kind_office() : m.kind_other();
-	const dayKinds: DayKind[] = [
-		'vacation',
-		'vacation_half',
-		'sick',
-		'flex_day',
-		'special_leave',
-		'public_holiday',
-		'workday'
-	];
-	const dayKindLabel: Record<DayKind, () => string> = {
-		vacation: m.day_vacation,
-		vacation_half: m.day_vacation_half,
-		sick: m.day_sick,
-		flex_day: m.day_flex_day,
-		special_leave: m.day_special_leave,
-		public_holiday: m.day_public_holiday,
-		workday: m.day_workday
-	};
-
 	function setEntry() {
 		run(() =>
 			entry ? api.put(`/days/${day.day}`, { kind: entry, note: '' }) : api.del(`/days/${day.day}`)
@@ -197,8 +179,8 @@
 			<label class="label" for="daykind">{m.day_type()}</label>
 			<select id="daykind" class="input" bind:value={entry} onchange={setEntry}>
 				<option value="">{day.holiday ? `${m.day_public_holiday()}: ${day.holiday}` : m.day_normal()}</option>
-				{#each dayKinds as k (k)}
-					<option value={k}>{dayKindLabel[k]()}</option>
+				{#each DAY_KINDS as k (k)}
+					<option value={k}>{dayKindLabel(k)}</option>
 				{/each}
 			</select>
 		</div>

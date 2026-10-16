@@ -292,3 +292,59 @@ class TodayOut(BaseModel):
 class Subdivision(BaseModel):
     code: str
     name: str
+
+
+# --- absences ---
+
+
+class AbsenceIn(BaseModel):
+    start: date
+    end: date
+    kind: DayKind
+    note: str = Field(default="", max_length=1000)
+
+    @model_validator(mode="after")
+    def _range(self) -> Self:
+        if self.end < self.start:
+            raise ValueError("end must not be before start")
+        if (self.end - self.start).days > 366:
+            raise ValueError("range too long")
+        if self.kind == DayKind.WORKDAY:
+            raise ValueError("workday is not an absence")
+        return self
+
+
+class AbsenceResult(BaseModel):
+    days: list[date]  # workdays that were (or would be) marked
+    vacation_days: float
+
+
+class PeriodOut(BaseModel):
+    start: date
+    end: date
+    kind: DayKind
+    note: str
+    workdays: int
+    vacation_days: float
+
+
+class VacationAccountOut(BaseModel):
+    year: int
+    configured: bool
+    days: float
+    carried_over: float
+    total: float
+    taken: float
+    planned: float
+    remaining: float
+    suggested_carry_over: float  # what was left over from the previous year
+
+
+class AllowanceIn(BaseModel):
+    days: float = Field(ge=0, le=366)
+    carried_over: float = Field(default=0, ge=0, le=366)
+
+
+class AbsencesOut(BaseModel):
+    account: VacationAccountOut
+    periods: list[PeriodOut]

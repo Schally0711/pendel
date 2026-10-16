@@ -8,7 +8,8 @@ Self-hosted work time tracking for people who split their week between **home of
 
 - Start/stop/break tracking with a mobile-friendly PWA
 - Configurable work time models (weekly hours, flexitime) and public holidays per German state
-- Flexitime balance (overtime / undertime), vacation and sick days
+- Flexitime balance (overtime / undertime)
+- Time off: vacation ranges (weekends/holidays skipped), yearly vacation account with carry-over, sick days, child sick days, flex days, release, training, parental/unpaid leave
 - Commute tracking: automatic via Home Assistant zones, Android (Tasker, OwnTracks) or any webhook
 - Statistics and charts, CSV/PDF export, tax overview (commuter allowance, home office allowance)
 - German and English UI

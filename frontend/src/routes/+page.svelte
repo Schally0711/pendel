@@ -7,6 +7,7 @@
 	import { errorText } from '#lib/errors.js';
 	import { clock, hm, localDate, localTime, minutesBetween, signedHm } from '#lib/time.js';
 	import type { Commute, Place, PlaceKind, Segment, Today, WorkSession } from '#lib/types.js';
+	import { dayKindLabel } from '#lib/labels.js';
 	import ProgressRing from '#lib/components/ProgressRing.svelte';
 	import Timeline from '#lib/components/Timeline.svelte';
 	import StatCard from '#lib/components/StatCard.svelte';
@@ -220,7 +221,9 @@
 						{working ? clock(actual) : hm(actual)}
 					</div>
 					<div class="mt-1 text-sm muted">
-						{#if target === 0}
+						{#if today.day.entry && today.day.entry !== 'workday'}
+							{dayKindLabel(today.day.entry)}
+						{:else if target === 0}
 							{today.day.holiday ?? m.no_target_today()}
 						{:else if actual >= target}
 							{m.target_reached()}

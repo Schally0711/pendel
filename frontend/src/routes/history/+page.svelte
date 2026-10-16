@@ -4,7 +4,8 @@
 	import { api } from '#lib/api.js';
 	import { auth } from '#lib/session.svelte.js';
 	import { formatDate, hm, localDate, monthRange, shiftMonth, signedHm, weekday } from '#lib/time.js';
-	import type { Day, DayKind, Place, Report } from '#lib/types.js';
+	import type { Day, Place, Report } from '#lib/types.js';
+	import { DAY_BADGE, dayKindLabel } from '#lib/labels.js';
 	import DayEditor from '#lib/components/DayEditor.svelte';
 	import { ChevronLeft, ChevronRight, TriangleAlert } from '@lucide/svelte';
 
@@ -31,23 +32,9 @@
 	const monthLabel = $derived(formatDate(`${month}-01`, getLocale(), { month: 'long', year: 'numeric' }));
 	const maxMinutes = $derived(Math.max(600, ...(report?.days.map((d) => Math.max(d.actual, d.target)) ?? [])));
 
-	const entryLabel: Record<DayKind, () => string> = {
-		vacation: m.day_vacation,
-		vacation_half: m.day_vacation_half,
-		sick: m.day_sick,
-		flex_day: m.day_flex_day,
-		special_leave: m.day_special_leave,
-		public_holiday: m.day_public_holiday,
-		workday: m.day_workday
-	};
-
 	function badge(d: Day): { text: string; cls: string } | null {
-		if (d.entry && d.entry !== 'workday')
-			return {
-				text: entryLabel[d.entry](),
-				cls: d.entry === 'sick' ? 'bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300' : 'bg-sky-100 text-sky-700 dark:bg-sky-950 dark:text-sky-300'
-			};
-		if (d.holiday) return { text: d.holiday, cls: 'bg-violet-100 text-violet-700 dark:bg-violet-950 dark:text-violet-300' };
+		if (d.entry && d.entry !== 'workday') return { text: dayKindLabel(d.entry), cls: DAY_BADGE[d.entry] };
+		if (d.holiday) return { text: d.holiday, cls: DAY_BADGE.public_holiday };
 		return null;
 	}
 

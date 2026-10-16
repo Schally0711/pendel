@@ -109,6 +109,25 @@ def evaluate_days(
     return results
 
 
+def schedule(db: Session, user: User, start: date, end: date) -> list[tuple[date, int, str | None]]:
+    """(day, weekday target of the active work model, holiday name) for every day in [start, end].
+
+    Used for absences: days before the first work model use that first model, so vacation from
+    before someone started using Pendel is still counted as workdays.
+    """
+    models = list(
+        db.scalars(select(WorkModel).where(WorkModel.user_id == user.id).order_by(WorkModel.valid_from))
+    )
+    cal = holiday_calendar(user, range(start.year, end.year + 1))
+    out = []
+    day = start
+    while day <= end:
+        model = _active_model(models, day) or (models[0] if models else None)
+        out.append((day, model.target_minutes_for_weekday(day.weekday()) if model else 0, cal.get(day)))
+        day += timedelta(days=1)
+    return out
+
+
 def local_today(user: User, now: datetime | None = None) -> date:
     return (now or datetime.now(UTC)).astimezone(ZoneInfo(user.timezone)).date()
 

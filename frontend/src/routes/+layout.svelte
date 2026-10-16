@@ -6,7 +6,7 @@
 	import { api } from '#lib/api.js';
 	import { auth } from '#lib/session.svelte.js';
 	import favicon from '#lib/assets/favicon.svg';
-	import { Clock, CalendarDays, Settings, Users, LogOut } from '@lucide/svelte';
+	import { Clock, CalendarDays, Palmtree, Settings, Users, LogOut } from '@lucide/svelte';
 	import './layout.css';
 	import type { LayoutProps } from './$types';
 
@@ -35,6 +35,7 @@
 	const nav = $derived([
 		{ href: '/', label: m.nav_today(), icon: Clock },
 		{ href: '/history', label: m.nav_history(), icon: CalendarDays },
+		{ href: '/absences', label: m.nav_absences(), icon: Palmtree },
 		{ href: '/settings', label: m.nav_settings(), icon: Settings },
 		...(auth.user?.is_admin ? [{ href: '/admin', label: m.nav_admin(), icon: Users }] : [])
 	]);

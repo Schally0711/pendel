@@ -40,8 +40,31 @@ class DayKind(enum.StrEnum):
     SICK = "sick"
     FLEX_DAY = "flex_day"  # day off paid from the flexitime balance
     SPECIAL_LEAVE = "special_leave"
+    RELEASE = "release"  # paid release from work (Freistellung)
+    SICK_CHILD = "sick_child"
+    TRAINING = "training"
+    PARENTAL_LEAVE = "parental_leave"
+    UNPAID_LEAVE = "unpaid_leave"
     PUBLIC_HOLIDAY = "public_holiday"  # manual holiday, e.g. a local one not known to the calendar
     WORKDAY = "workday"  # override: work on a day that would otherwise be a holiday
+
+
+# Day kinds that make the day neutral for the flexitime balance (target 0)
+NEUTRAL_DAY_KINDS = frozenset(
+    {
+        DayKind.VACATION,
+        DayKind.SICK,
+        DayKind.SPECIAL_LEAVE,
+        DayKind.RELEASE,
+        DayKind.SICK_CHILD,
+        DayKind.TRAINING,
+        DayKind.PARENTAL_LEAVE,
+        DayKind.UNPAID_LEAVE,
+        DayKind.PUBLIC_HOLIDAY,
+    }
+)
+# Vacation days charged per day kind
+VACATION_DAYS = {DayKind.VACATION: 1.0, DayKind.VACATION_HALF: 0.5}
 
 
 class BreakKind(enum.StrEnum):
@@ -264,3 +287,16 @@ class Invitation(Base):
     expires_at: Mapped[datetime] = mapped_column(UTCDateTime)
     used_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
     used_by_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+
+
+class VacationAllowance(Base):
+    """Vacation entitlement of one year."""
+
+    __tablename__ = "vacation_allowances"
+    __table_args__ = (UniqueConstraint("user_id", "year"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    year: Mapped[int] = mapped_column(Integer)
+    days: Mapped[float] = mapped_column(Float, default=30)
+    carried_over: Mapped[float] = mapped_column(Float, default=0)  # remaining days from the previous year

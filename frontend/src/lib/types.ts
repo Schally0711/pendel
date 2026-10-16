@@ -8,6 +8,11 @@ export type DayKind =
 	| 'sick'
 	| 'flex_day'
 	| 'special_leave'
+	| 'release'
+	| 'sick_child'
+	| 'training'
+	| 'parental_leave'
+	| 'unpaid_leave'
 	| 'public_holiday'
 	| 'workday';
 export type CommuteDirection = 'to_work' | 'from_work';
@@ -146,4 +151,25 @@ export interface Segment {
 	start: string;
 	end: string | null;
 	type: PlaceKind | 'travel' | 'break';
+}
+
+export interface AbsencePeriod {
+	start: string;
+	end: string;
+	kind: DayKind;
+	note: string;
+	workdays: number;
+	vacation_days: number;
+}
+
+export interface VacationAccount {
+	year: number;
+	configured: boolean;
+	days: number;
+	carried_over: number;
+	total: number;
+	taken: number;
+	planned: number;
+	remaining: number;
+	suggested_carry_over: number;
 }

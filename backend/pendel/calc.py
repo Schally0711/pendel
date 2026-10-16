@@ -6,7 +6,7 @@ Everything is in minutes. Running intervals (no end yet) are evaluated up to `no
 from dataclasses import dataclass, field
 from datetime import date, datetime
 
-from .models import BreakMode, DayKind
+from .models import NEUTRAL_DAY_KINDS, BreakMode, DayKind
 
 # German Arbeitszeitgesetz §4: required break by working time (without breaks)
 LEGAL_BREAKS = ((9 * 60, 45), (6 * 60, 30))
@@ -65,18 +65,17 @@ class DayResult:
 def target_minutes(base: int, *, is_holiday: bool, entry: DayKind | None) -> int:
     """Target time of a day.
 
-    `base` is the weekday target of the active work model. Vacation, sickness, special leave and
-    holidays are neutral (target 0); a flex day keeps the target so it is paid from the balance.
+    `base` is the weekday target of the active work model. Absences like vacation, sickness,
+    release or training and holidays are neutral (target 0); a flex day keeps the target so it is
+    paid from the balance.
     """
-    match entry:
-        case DayKind.WORKDAY:
-            return base
-        case DayKind.VACATION | DayKind.SICK | DayKind.SPECIAL_LEAVE | DayKind.PUBLIC_HOLIDAY:
-            return 0
-        case DayKind.VACATION_HALF:
-            return 0 if is_holiday else round(base / 2)
-        case _:
-            return 0 if is_holiday else base
+    if entry == DayKind.WORKDAY:
+        return base
+    if entry in NEUTRAL_DAY_KINDS:
+        return 0
+    if entry == DayKind.VACATION_HALF:
+        return 0 if is_holiday else round(base / 2)
+    return 0 if is_holiday else base
 
 
 def office_gap_counts_as_break(gap_minutes: float, max_break_minutes: int) -> bool:
