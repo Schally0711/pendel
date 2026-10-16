@@ -7,10 +7,10 @@
 	import { errorText } from '#lib/errors.js';
 	import type { ApiTokenInfo } from '#lib/types.js';
 	import Alert from './Alert.svelte';
-	import { Check, Copy, KeyRound, Plus, Trash2 } from '@lucide/svelte';
+	import { Check, Copy, House, KeyRound, Plus, Trash2 } from '@lucide/svelte';
 
 	let tokens = $state<ApiTokenInfo[]>([]);
-	let name = $state('Home Assistant');
+	let name = $state('');
 	let created = $state<string | null>(null);
 	let copied = $state<string | null>(null);
 	let error = $state<string | null>(null);
@@ -23,6 +23,7 @@
 		error = null;
 		try {
 			created = (await api.post<ApiTokenInfo>('/tokens', { name })).token ?? null;
+			name = '';
 			await load();
 		} catch (err) {
 			error = errorText(err);
@@ -47,40 +48,9 @@
 		);
 
 	const origin = typeof location !== 'undefined' ? location.origin : '';
-	const snippets = $derived([
-		{ key: 'secret', title: m.ha_step_secret(), code: `pendel_token: "Bearer ${created ?? '<TOKEN>'}"` },
-		{
-			key: 'config',
-			title: m.ha_step_config(),
-			code: `rest_command:
-  pendel_event:
-    url: "${origin}/api/events"
-    method: POST
-    headers:
-      Authorization: !secret pendel_token
-    content_type: "application/json"
-    payload: >-
-      {{ {"type": "zone_change", "from": from_zone, "to": to_zone,
-          "at": at, "source": "home_assistant"} | to_json }}`
-		},
-		{
-			key: 'automation',
-			title: m.ha_step_automation(),
-			code: `alias: Pendel – Zonenwechsel melden
-mode: queued
-triggers:
-  - trigger: state
-    entity_id: person.ich
-    not_from: [unknown, unavailable]
-    not_to: [unknown, unavailable]
-actions:
-  - action: rest_command.pendel_event
-    data:
-      from_zone: "{{ trigger.from_state.state }}"
-      to_zone: "{{ trigger.to_state.state }}"
-      at: "{{ trigger.to_state.last_changed.isoformat() }}"`
-		}
-	]);
+	// Revoked tokens are history only; keep the list short
+	const active = $derived(tokens.filter((t) => !t.revoked_at));
+	const steps = $derived([m.ha_step_install(), m.ha_step_add(), m.ha_step_login(), m.ha_step_zones()]);
 </script>
 
 <section class="card space-y-5">
@@ -89,65 +59,66 @@ actions:
 		<p class="text-sm muted">{m.integrations_text()}</p>
 	</div>
 
-	{#if tokens.length}
+	{#if active.length}
 		<ul class="divide-y divide-slate-100 dark:divide-slate-800">
-			{#each tokens as t (t.id)}
-				<li class="flex items-center gap-3 py-2.5 text-sm {t.revoked_at ? 'opacity-50' : ''}">
+			{#each active as t (t.id)}
+				<li class="flex items-center gap-3 py-2.5 text-sm">
 					<KeyRound class="size-4 shrink-0 muted" />
 					<span class="font-medium">{t.name}</span>
 					<span class="flex-1 truncate text-xs muted">
-						{t.revoked_at
-							? m.token_revoked()
-							: t.last_used_at
-								? m.token_last_used({ date: fmt(t.last_used_at) })
-								: m.token_never_used()}
+						{t.last_used_at ? m.token_last_used({ date: fmt(t.last_used_at) }) : m.token_never_used()}
 					</span>
-					{#if !t.revoked_at}
-						<button class="btn-danger px-2 py-1 text-xs" onclick={() => revoke(t)}>
-							<Trash2 class="size-4" />{m.revoke()}
-						</button>
-					{/if}
+					<button class="btn-danger px-2 py-1 text-xs" onclick={() => revoke(t)}>
+						<Trash2 class="size-4" />{m.revoke()}
+					</button>
 				</li>
 			{/each}
 		</ul>
 	{/if}
 
-	<form class="flex flex-wrap items-end gap-2" onsubmit={create}>
-		<div class="min-w-48 flex-1">
-			<label class="label" for="tname">{m.token_name()}</label>
-			<input id="tname" class="input" bind:value={name} required maxlength="100" />
-		</div>
-		<button class="btn-secondary"><Plus class="size-4" />{m.create_token()}</button>
-	</form>
-	<Alert message={error} />
-
-	{#if created}
-		<div class="rounded-2xl bg-brand-50 p-4 dark:bg-brand-900/30">
-			<p class="mb-2 text-sm font-medium">{m.token_created()}</p>
+	<details class="rounded-2xl ring-1 ring-slate-200 dark:ring-slate-700">
+		<summary class="flex cursor-pointer items-center gap-2 px-4 py-3 text-sm font-medium">
+			<House class="size-4 text-brand-600" />{m.ha_setup()}
+		</summary>
+		<div class="space-y-3 px-4 pb-4 text-sm">
+			<p class="muted">{m.ha_integration_text()}</p>
+			<ol class="list-decimal space-y-1.5 pl-5">
+				{#each steps as step, i (i)}<li>{step}</li>{/each}
+			</ol>
 			<div class="flex gap-2">
-				<input class="input font-mono text-xs" readonly value={created} onfocus={(e) => e.currentTarget.select()} />
-				<button class="btn-secondary shrink-0" onclick={() => copy('token', created!)}>
-					{#if copied === 'token'}<Check class="size-4" />{m.copied()}{:else}<Copy class="size-4" />{m.copy()}{/if}
+				<input class="input font-mono text-xs" readonly value={origin} onfocus={(e) => e.currentTarget.select()} />
+				<button class="btn-secondary shrink-0" onclick={() => copy('url', origin)}>
+					{#if copied === 'url'}<Check class="size-4" />{m.copied()}{:else}<Copy class="size-4" />{m.copy()}{/if}
 				</button>
 			</div>
 		</div>
-	{/if}
+	</details>
 
-	<details class="group rounded-2xl ring-1 ring-slate-200 dark:ring-slate-700">
-		<summary class="cursor-pointer px-4 py-3 text-sm font-medium">{m.ha_setup()}</summary>
-		<ol class="space-y-4 px-4 pb-4 text-sm">
-			<li>1. {m.ha_step_places()}</li>
-			{#each snippets as s, i (s.key)}
-				<li>
-					<div class="mb-1.5 flex items-center justify-between gap-2">
-						<span>{i + 2}. {s.title}</span>
-						<button class="btn-ghost px-2 py-1 text-xs" onclick={() => copy(s.key, s.code)}>
-							{#if copied === s.key}<Check class="size-3.5" />{m.copied()}{:else}<Copy class="size-3.5" />{m.copy()}{/if}
+	<details class="rounded-2xl ring-1 ring-slate-200 dark:ring-slate-700">
+		<summary class="flex cursor-pointer items-center gap-2 px-4 py-3 text-sm font-medium">
+			<KeyRound class="size-4 text-brand-600" />{m.other_tools()}
+		</summary>
+		<div class="space-y-3 px-4 pb-4 text-sm">
+			<p class="muted">{m.other_tools_text()}</p>
+			<form class="flex flex-wrap items-end gap-2" onsubmit={create}>
+				<div class="min-w-48 flex-1">
+					<label class="label" for="tname">{m.token_name()}</label>
+					<input id="tname" class="input" bind:value={name} required maxlength="100" placeholder="Tasker" />
+				</div>
+				<button class="btn-secondary"><Plus class="size-4" />{m.create_token()}</button>
+			</form>
+			<Alert message={error} />
+			{#if created}
+				<div class="rounded-2xl bg-brand-50 p-4 dark:bg-brand-900/30">
+					<p class="mb-2 text-sm font-medium">{m.token_created()}</p>
+					<div class="flex gap-2">
+						<input class="input font-mono text-xs" readonly value={created} onfocus={(e) => e.currentTarget.select()} />
+						<button class="btn-secondary shrink-0" onclick={() => copy('token', created!)}>
+							{#if copied === 'token'}<Check class="size-4" />{m.copied()}{:else}<Copy class="size-4" />{m.copy()}{/if}
 						</button>
 					</div>
-					<pre class="overflow-x-auto rounded-xl bg-slate-900 p-3 text-xs leading-relaxed text-slate-100">{s.code}</pre>
-				</li>
-			{/each}
-		</ol>
+				</div>
+			{/if}
+		</div>
 	</details>
 </section>

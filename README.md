@@ -63,7 +63,7 @@ Content-Type: application/json
 ```
 
 `zone_enter` / `zone_leave` with `"zone": "..."` work as well. Pendel derives commutes, office time and breaks
-(absences from the office up to 90 min = break, longer = work). The settings page shows ready-to-paste Home Assistant YAML.
+(absences from the office up to 90 min = break, longer = work).
 
 ## Container
 
