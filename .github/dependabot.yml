@@ -9,9 +9,19 @@ updates:
     groups:
       frontend:
         patterns: ["*"]
+    ignore:
+      # TypeScript 7 (native compiler) is not supported by svelte-check yet
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: github-actions
     directory: /
     schedule: { interval: monthly }
   - package-ecosystem: docker
     directory: /
     schedule: { interval: monthly }
+    ignore:
+      # Node: stay on the LTS line (24), majors are bumped by hand; Python minor versions likewise
+      - dependency-name: library/node
+        update-types: ["version-update:semver-major"]
+      - dependency-name: library/python
+        update-types: ["version-update:semver-minor"]
