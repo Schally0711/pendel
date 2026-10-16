@@ -4,6 +4,8 @@ Alle nennenswerten Änderungen pro Version. Format angelehnt an [Keep a Changelo
 
 ## [Unveröffentlicht]
 
+- Intelligenter Start (`device_active`): Arbeitsgerät aktiv → Homeoffice startet nur an Arbeitstagen ohne Abwesenheit,
+  wenn nichts läuft und heute noch nicht gearbeitet wurde; Anleitung für Home Assistant, Windows und macOS
 - OwnTracks-Einrichtung: Hinweis für iOS – vor dem Scannen in OwnTracks „Allow external configuration“ einschalten
 
 ## [0.9.1] – 2026-10-16 (Beta)

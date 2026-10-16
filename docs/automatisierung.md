@@ -6,6 +6,7 @@ dass du **Zuhause** oder das **Büro** betrittst bzw. verlässt. Dazu gibt es dr
 - [Home Assistant](#home-assistant) – Integration über HACS, mit Sensoren und Knöpfen
 - [OwnTracks](#owntracks) – kostenlose App für Android und iOS, ohne Home Assistant
 - [Kurzbefehle, Tasker, MacroDroid & Co.](#kurzbefehle-tasker-macrodroid--co) – alles, was HTTP-Anfragen senden kann
+- [Arbeitsnotebook: intelligenter Start](#arbeitsnotebook-intelligenter-start) – Homeoffice beginnt, wenn du das Notebook aufklappst
 
 Für Stempeln ohne Standort gibt es die Schnellaktionen am App-Icon (siehe [Bedienung](bedienung.md#heute-stempeln)).
 
@@ -77,6 +78,7 @@ Content-Type: application/json
 | Ort betreten | `POST /api/events` | `{"type": "zone_enter", "zone": "Büro"}` |
 | Ort verlassen | `POST /api/events` | `{"type": "zone_leave", "zone": "Zuhause"}` |
 | Ortswechsel (z. B. Home-Assistant-Zustände) | `POST /api/events` | `{"type": "zone_change", "from": "home", "to": "not_home"}` |
+| Intelligenter Start ([siehe unten](#arbeitsnotebook-intelligenter-start)) | `POST /api/events` | `{"type": "device_active"}` |
 | Homeoffice starten | `POST /api/clock/start` | `{"kind": "home"}` |
 | Im Büro starten | `POST /api/clock/start` | `{"kind": "office"}` |
 | Pause starten / beenden | `POST /api/clock/break/start` bzw. `/break/stop` | `{}` |
@@ -90,6 +92,68 @@ Optional `"at": "2026-10-14T07:18:00+02:00"` mitsenden, wenn die Meldung verzög
 
 **Tasker / MacroDroid (Android):** Auslöser z. B. *Ort betreten*, *WLAN verbunden* (Büro-WLAN) oder *NFC-Tag*,
 Aktion *HTTP Request* bzw. *HTTP-Anfrage* mit den Werten oben.
+
+## Arbeitsnotebook: intelligenter Start
+
+Das Ereignis **`device_active`** („mein Arbeitsgerät ist in Benutzung“) startet die Arbeitszeit – standardmäßig im
+Homeoffice – **nur, wenn alles passt**:
+
+- es ist ein Arbeitstag (Soll > 0, kein Feiertag),
+- es ist keine Abwesenheit eingetragen (Urlaub, Gleittag, krank …; ein halber Urlaubstag zählt als Arbeitstag),
+- es läuft gerade keine Arbeitszeit und kein Arbeitsweg,
+- heute wurde noch nicht gearbeitet.
+
+Sonst passiert nichts – das Automatik-Protokoll zeigt, warum. Der Auslöser darf also ruhig mehrmals am Tag feuern
+(Notebook auf- und zuklappen, WLAN-Wiederverbindung). Mit `"zone": "Büro"` startet er stattdessen die Bürozeit.
+Feierabend leitet Pendel daraus bewusst nicht ab.
+
+```http
+POST https://<deine-pendel-adresse>/api/events
+Authorization: Bearer <Token>
+Content-Type: application/json
+
+{"type": "device_active"}
+```
+
+**Mit Home Assistant (ohne Software auf dem Notebook):** Viele Router bzw. Netzwerk-Integrationen (UniFi, FRITZ!Box,
+OpenWrt …) liefern einen *Geräte-Tracker*, der „zuhause“ meldet, sobald das Notebook im Heimnetz ist. Eine Automation
+ruft dann die Aktion der Pendel-Integration auf:
+
+```yaml
+automation:
+  - alias: Arbeitsnotebook im Heimnetz → Homeoffice
+    triggers:
+      - trigger: state
+        entity_id: device_tracker.arbeitsnotebook
+        to: home
+    conditions:
+      - condition: time
+        after: "06:00:00"
+        before: "14:00:00"
+    actions:
+      - action: pendel.device_active
+```
+
+Achtung: Manche Notebooks bleiben im Standby im WLAN; dann zählt der Moment, in dem sie (wieder) ins Netz kommen.
+Bei zufälligen MAC-Adressen (Windows/macOS „private Adresse“) für das Heim-WLAN die feste Adresse einstellen.
+
+**Windows (Aufgabenplanung):** Neue Aufgabe mit den Auslösern *Bei Anmeldung* und *Bei Entsperren der Arbeitsstation*,
+Aktion `powershell.exe -NoProfile -WindowStyle Hidden -File C:\Users\<du>\pendel-start.ps1`:
+
+```powershell
+# pendel-start.ps1 – nur im Heimnetz melden (Name des Netzwerks wie in den Windows-Netzwerkeinstellungen)
+if ((Get-NetConnectionProfile).Name -notcontains 'MeinHeimWLAN') { exit }
+Invoke-RestMethod -Method Post -Uri 'https://pendel.example.com/api/events' `
+  -Headers @{ Authorization = 'Bearer <Token>' } -ContentType 'application/json' `
+  -Body '{"type": "device_active"}'
+```
+
+**macOS:** z. B. mit [sleepwatcher](https://formulae.brew.sh/formula/sleepwatcher) beim Aufwachen ein Skript mit
+`curl -X POST -H 'Authorization: Bearer <Token>' -H 'Content-Type: application/json' -d '{"type":"device_active"}' https://pendel.example.com/api/events`
+ausführen.
+
+Auf Firmengeräten sind eigene Aufgaben oder Skripte oft nicht erlaubt – dann ist der Weg über das Heimnetz
+(Home Assistant) die bessere Wahl.
 
 ## API
 

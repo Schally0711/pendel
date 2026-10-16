@@ -430,5 +430,12 @@
 	"make_admin": "Make admin",
 	"revoke_admin": "Revoke admin rights",
 	"make_admin_confirm": "Give {name} admin rights? Admins can invite and delete people and back up and replace the whole instance.",
-	"revoke_admin_confirm": "Revoke admin rights from {name}?"
+	"revoke_admin_confirm": "Revoke admin rights from {name}?",
+	"event_device_active": "Work device active",
+	"act_device_session_started": "Work started (smart start)",
+	"act_ignored_absence": "ignored (absence booked)",
+	"act_ignored_already_running": "ignored (already running)",
+	"act_ignored_commuting": "ignored (commuting)",
+	"act_ignored_already_worked": "ignored (already worked today)",
+	"action_device_active": "Smart start (e.g. laptop opened): starts home office only on workdays when nothing ran today"
 }

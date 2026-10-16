@@ -7,7 +7,7 @@ from fastapi import APIRouter, Body, HTTPException, Request, status
 from sqlalchemy import select
 
 from ..auth import DB, BasicTokenUser, CurrentUser, login, new_token
-from ..automation import ZONE_ENTER, ZONE_LEAVE, expand_zone_change, process, recent_duplicate
+from ..automation import DEVICE_ACTIVE, ZONE_ENTER, ZONE_LEAVE, expand_zone_change, process, recent_duplicate
 from ..models import ApiToken, Event, User, utcnow
 from ..schemas import EventIn, EventOut, EventResult, TokenCreate, TokenCreated, TokenLogin, TokenOut
 from .common import FromDate, ToDate, owned
@@ -26,6 +26,8 @@ def receive_event(data: EventIn, request: Request, user: CurrentUser, db: DB) ->
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "event_time_out_of_range")
     if data.type == "zone_change":
         parts = expand_zone_change(data.from_zone, data.to_zone)
+    elif data.type == DEVICE_ACTIVE:
+        parts = [(DEVICE_ACTIVE, data.zone)]
     else:
         if not data.zone:
             raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "zone_missing")
@@ -35,7 +37,7 @@ def receive_event(data: EventIn, request: Request, user: CurrentUser, db: DB) ->
 
 
 def _record(
-    db: DB, user: User, request: Request, parts: list[tuple[str, str]], at: datetime, source: str
+    db: DB, user: User, request: Request, parts: list[tuple[str, str | None]], at: datetime, source: str
 ) -> list[EventOut]:
     """Store zone events (skipping duplicates) and run them through the automation rules."""
     token = getattr(request.state, "api_token", None)

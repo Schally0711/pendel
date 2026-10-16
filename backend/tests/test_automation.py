@@ -166,3 +166,40 @@ def test_token_via_password(admin):
     c = TestClient(admin.app, headers={"Authorization": f"Bearer {r.json()['token']}"})
     assert c.get("/api/me").status_code == 200
     assert "pendel_session" not in r.cookies
+
+
+def device(ha, hhmm, day=DAY, zone=None):
+    body = {"type": "device_active", "at": at(hhmm, day)} | ({"zone": zone} if zone else {})
+    r = ha.post("/api/events", json=body)
+    assert r.status_code == 200, r.text
+    return [a for e in r.json()["events"] for a in e["payload"]["actions"]]
+
+
+def test_device_active_starts_home_office_once(admin, ha):
+    assert device(ha, "08:05") == ["device_session_started"]
+    assert device(ha, "08:30") == ["ignored_already_running"]
+    (s,), _ = day_records(admin)
+    assert (s["kind"], s["source"], hm(s["start"])) == ("home", "automatic", "06:05")
+    admin.patch(f"/api/sessions/{s['id']}", json={"end": at("12:00")})
+    # laptop opened again after lunch: today was already worked, nothing starts
+    assert device(ha, "13:10") == ["ignored_already_worked"]
+
+
+def test_device_active_respects_days_off(admin, ha):
+    assert device(ha, "09:00", day="2026-10-10") == ["ignored_no_workday"]  # Saturday
+    assert device(ha, "09:00", day="2026-05-01") == ["ignored_no_workday"]  # Labour Day (Friday)
+    for day, kind in (("2026-10-05", "vacation"), ("2026-10-06", "flex_day"), ("2026-10-07", "sick")):
+        admin.put(f"/api/days/{day}", json={"kind": kind})
+        assert device(ha, "09:00", day=day) == ["ignored_absence"], kind
+    admin.put("/api/days/2026-10-08", json={"kind": "vacation_half"})
+    assert device(ha, "13:00", day="2026-10-08") == ["device_session_started"]
+
+
+def test_device_active_other_place_and_commute(admin, ha):
+    assert move(ha, "07:20", "home", "not_home") == ["commute_to_work_started"]
+    assert device(ha, "07:30") == ["ignored_commuting"]
+    assert move(ha, "07:40", "not_home", "home") == ["commute_to_work_discarded"]
+    assert device(ha, "09:00", day="2026-10-13", zone="Arbeit") == ["device_session_started"]
+    (s,), _ = day_records(admin, "2026-10-13")
+    assert s["kind"] == "office"
+    assert device(ha, "09:00", day="2026-10-12", zone="Mond") == ["ignored_unknown_zone"]

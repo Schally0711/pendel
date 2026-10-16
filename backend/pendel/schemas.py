@@ -440,12 +440,13 @@ class EventIn(BaseModel):
     """Location event from an automation.
 
     Either `type` zone_enter/zone_leave with `zone`, or `type` zone_change with `from`/`to`
-    (e.g. Home Assistant person states like "home", "not_home", "Arbeit").
+    (e.g. Home Assistant person states like "home", "not_home", "Arbeit"), or `type` device_active
+    (smart start, optional `zone` = place, default home).
     """
 
     model_config = ConfigDict(populate_by_name=True)
 
-    type: str = Field(pattern=r"^(zone_enter|zone_leave|zone_change)$")
+    type: str = Field(pattern=r"^(zone_enter|zone_leave|zone_change|device_active)$")
     zone: str | None = Field(default=None, max_length=100)
     from_zone: str | None = Field(default=None, alias="from", max_length=100)
     to_zone: str | None = Field(default=None, alias="to", max_length=100)

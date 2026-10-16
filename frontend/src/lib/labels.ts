@@ -86,6 +86,11 @@ const ACTIONS: Record<string, () => string> = {
 	gap_dropped_jitter: m.act_gap_dropped_jitter,
 	ignored_no_workday: m.act_ignored_no_workday,
 	ignored_unknown_zone: m.act_ignored_unknown_zone,
+	device_session_started: m.act_device_session_started,
+	ignored_absence: m.act_ignored_absence,
+	ignored_already_running: m.act_ignored_already_running,
+	ignored_commuting: m.act_ignored_commuting,
+	ignored_already_worked: m.act_ignored_already_worked,
 	no_change: m.act_no_change
 };
 

@@ -302,7 +302,11 @@
 						<li class="flex gap-2">
 							<span class="w-10 shrink-0 tabular-nums muted">{localTime(ev.occurred_at, tz)}</span>
 							<span class="shrink-0 font-medium">
-								{ev.zone} {ev.type === 'zone_enter' ? m.event_zone_enter() : m.event_zone_leave()}
+								{#if ev.type === 'device_active'}
+									{m.event_device_active()}{ev.zone ? ` (${ev.zone})` : ''}
+								{:else}
+									{ev.zone} {ev.type === 'zone_enter' ? m.event_zone_enter() : m.event_zone_leave()}
+								{/if}
 							</span>
 							<span class="muted">→ {(ev.payload.actions ?? []).map(actionLabel).join(', ')}</span>
 						</li>

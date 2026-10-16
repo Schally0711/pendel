@@ -11,6 +11,10 @@ Rules (t = event time):
 - enter home with a running commute to work → it was a private trip or GPS jitter: discarded
 
 Absences shorter than GAP_JITTER_MINUTES are dropped as GPS jitter. Every result can be edited.
+
+`device_active` ("my work laptop was opened / unlocked / joined the home network") is a smart start:
+a session at the given place (default: home) starts only on a workday without absence, when nothing
+is running and nothing was worked today yet – otherwise it is ignored, so triggers may fire often.
 """
 
 from datetime import datetime, timedelta
@@ -26,6 +30,7 @@ from .models import (
     Commute,
     CommuteDirection,
     DayEntry,
+    DayKind,
     Event,
     Place,
     PlaceKind,
@@ -41,6 +46,9 @@ DEFAULT_GAP_MAX_MINUTES = 90
 
 ZONE_ENTER = "zone_enter"
 ZONE_LEAVE = "zone_leave"
+DEVICE_ACTIVE = "device_active"
+# Day kinds on which a smart start still happens (half a vacation day means half a day of work)
+WORKING_DAY_KINDS = {DayKind.WORKDAY, DayKind.VACATION_HALF}
 
 
 def find_place(db: Session, user: User, zone: str | None) -> Place | None:
@@ -225,10 +233,47 @@ def on_enter(db: Session, user: User, place: Place, t: datetime) -> list[str]:
     return actions or ["no_change"]
 
 
+def _home_place(db: Session, user: User) -> Place | None:
+    return db.scalar(
+        select(Place)
+        .where(Place.user_id == user.id, Place.kind == PlaceKind.HOME, Place.archived.is_(False))
+        .order_by(Place.id)
+    )
+
+
+def on_device_active(db: Session, user: User, place: Place, t: datetime) -> list[str]:
+    day = _local_day(user, t)
+    entry = db.scalar(select(DayEntry.kind).where(DayEntry.user_id == user.id, DayEntry.day == day))
+    if entry is not None and entry not in WORKING_DAY_KINDS:
+        return ["ignored_absence"]
+    if not is_workday(db, user, t):
+        return ["ignored_no_workday"]
+    if _running_session(db, user):
+        return ["ignored_already_running"]
+    if _running_commute(db, user):
+        return ["ignored_commuting"]
+    tz = ZoneInfo(user.timezone)
+    day_start = datetime.combine(day, datetime.min.time(), tz)
+    worked = db.scalar(
+        select(func.count(WorkSession.id)).where(
+            WorkSession.user_id == user.id, WorkSession.start >= day_start, WorkSession.start <= t
+        )
+    )
+    if worked:
+        return ["ignored_already_worked"]
+    db.add(WorkSession(user_id=user.id, kind=place.kind, place_id=place.id, start=t, source=Source.AUTOMATIC))
+    return ["device_session_started"]
+
+
 def process(db: Session, user: User, event: Event) -> list[str]:
     """Apply one stored event; marks it processed and records the actions in its payload."""
-    place = find_place(db, user, event.zone)
-    if event.type in (ZONE_ENTER, ZONE_LEAVE) and place is None:
+    if event.type == DEVICE_ACTIVE:
+        place = find_place(db, user, event.zone) if event.zone else _home_place(db, user)
+    else:
+        place = find_place(db, user, event.zone)
+    if event.type == DEVICE_ACTIVE:
+        actions = on_device_active(db, user, place, event.occurred_at) if place else ["ignored_unknown_zone"]
+    elif event.type in (ZONE_ENTER, ZONE_LEAVE) and place is None:
         actions = ["ignored_unknown_zone"]
     elif event.type == ZONE_ENTER:
         actions = on_enter(db, user, place, event.occurred_at)

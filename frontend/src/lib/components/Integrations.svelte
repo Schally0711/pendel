@@ -66,6 +66,7 @@
 	const actions = [
 		['/api/events', '{"type": "zone_enter", "zone": "…"}', 'action_zone_enter'],
 		['/api/events', '{"type": "zone_leave", "zone": "…"}', 'action_zone_leave'],
+		['/api/events', '{"type": "device_active"}', 'action_device_active'],
 		['/api/clock/start', '{"kind": "home"}', 'action_start_home'],
 		['/api/clock/start', '{"kind": "office"}', 'action_start_office'],
 		['/api/clock/break/start', '{}', 'action_break_start'],

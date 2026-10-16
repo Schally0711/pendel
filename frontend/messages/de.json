@@ -430,5 +430,12 @@
 	"make_admin": "Zum Admin machen",
 	"revoke_admin": "Admin-Rechte entziehen",
 	"make_admin_confirm": "{name} Admin-Rechte geben? Admins können Personen einladen, löschen und die ganze Instanz sichern und ersetzen.",
-	"revoke_admin_confirm": "{name} die Admin-Rechte entziehen?"
+	"revoke_admin_confirm": "{name} die Admin-Rechte entziehen?",
+	"event_device_active": "Arbeitsgerät aktiv",
+	"act_device_session_started": "Arbeitszeit gestartet (intelligenter Start)",
+	"act_ignored_absence": "ignoriert (Abwesenheit eingetragen)",
+	"act_ignored_already_running": "ignoriert (läuft bereits)",
+	"act_ignored_commuting": "ignoriert (unterwegs)",
+	"act_ignored_already_worked": "ignoriert (heute schon gearbeitet)",
+	"action_device_active": "Intelligenter Start (z. B. Notebook aufgeklappt): startet Homeoffice nur an Arbeitstagen, wenn heute noch nichts lief"
 }
