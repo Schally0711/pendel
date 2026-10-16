@@ -10,6 +10,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
 from .calc import BreakSpan, DayResult, Rules, SessionSpan, Span, evaluate_day, target_minutes
+from .employments import covered, employments, latest_started
 from .models import BalanceAdjustment, Commute, DayEntry, DayKind, PlaceKind, User, WorkModel, WorkSession
 
 
@@ -94,12 +95,13 @@ def evaluate_days(
     ):
         commutes[c.start.astimezone(tz).date()].append(Span(c.start, c.end))
 
+    emps = employments(db, user)
     cal = holiday_calendar(user, range(start.year, end.year + 1))
     results = []
     day = start
     while day <= end:
         model = _active_model(models, day)
-        base = model.target_minutes_for_weekday(day.weekday()) if model else 0
+        base = model.target_minutes_for_weekday(day.weekday()) if model and covered(emps, day) else 0
         holiday = cal.get(day)
         entry = entries.get(day)
         target = target_minutes(base, is_holiday=holiday is not None, entry=entry)
@@ -113,17 +115,20 @@ def schedule(db: Session, user: User, start: date, end: date) -> list[tuple[date
     """(day, weekday target of the active work model, holiday name) for every day in [start, end].
 
     Used for absences: days before the first work model use that first model, so vacation from
-    before someone started using Pendel is still counted as workdays.
+    before someone started using Pendel is still counted as workdays. Days outside every
+    employment (gaps between jobs) have no target.
     """
     models = list(
         db.scalars(select(WorkModel).where(WorkModel.user_id == user.id).order_by(WorkModel.valid_from))
     )
+    emps = employments(db, user)
     cal = holiday_calendar(user, range(start.year, end.year + 1))
     out = []
     day = start
     while day <= end:
         model = _active_model(models, day) or (models[0] if models else None)
-        out.append((day, model.target_minutes_for_weekday(day.weekday()) if model else 0, cal.get(day)))
+        base = model.target_minutes_for_weekday(day.weekday()) if model and covered(emps, day) else 0
+        out.append((day, base, cal.get(day)))
         day += timedelta(days=1)
     return out
 
@@ -135,15 +140,19 @@ def local_today(user: User, now: datetime | None = None) -> date:
 def balance(db: Session, user: User, until: date, now: datetime | None = None) -> int:
     """Flexitime balance in minutes at the end of `until`: adjustments plus (actual - target) per day.
 
-    Days after today do not count yet (their target is not due).
+    Days after today do not count yet (their target is not due). Each employment starts from
+    zero: only its own days and adjustments count.
     """
     until = min(until, local_today(user, now))
+    emp = latest_started(employments(db, user), until)
+    since = emp.start if emp else date.min
     adjustments = db.scalar(
         select(func.coalesce(func.sum(BalanceAdjustment.minutes), 0)).where(
-            BalanceAdjustment.user_id == user.id, BalanceAdjustment.day <= until
+            BalanceAdjustment.user_id == user.id, BalanceAdjustment.day.between(since, until)
         )
     )
     first_model = db.scalar(select(func.min(WorkModel.valid_from)).where(WorkModel.user_id == user.id))
     if first_model is None or first_model > until:
         return adjustments
-    return adjustments + sum(r.diff for r in evaluate_range(db, user, first_model, until, now))
+    start = max(first_model, since)
+    return adjustments + sum(r.diff for r in evaluate_range(db, user, start, until, now))

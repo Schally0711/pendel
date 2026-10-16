@@ -3,7 +3,7 @@ from sqlalchemy import Connection
 
 from pendel import models  # noqa: F401  (registers tables on Base.metadata)
 from pendel.config import get_settings
-from pendel.db import Base, make_engine
+from pendel.db import Base, make_engine, migration_connection
 
 target_metadata = Base.metadata
 
@@ -28,7 +28,7 @@ def run_migrations_online() -> None:
         return
     settings = get_settings()
     settings.data_dir.mkdir(parents=True, exist_ok=True)
-    with make_engine(settings.effective_database_url).connect() as conn:
+    with migration_connection(make_engine(settings.effective_database_url)) as conn:
         _configure(connection=conn)
         with context.begin_transaction():
             context.run_migrations()

@@ -4,7 +4,7 @@ from datetime import date
 
 from fastapi import APIRouter, HTTPException, Query, status
 
-from ..absences import delete_range, periods, set_allowance, set_range, vacation_account
+from ..absences import account_employment, delete_range, periods, set_allowance, set_range, vacation_account
 from ..auth import DB, CurrentUser
 from ..models import VACATION_DAYS, User
 from ..schemas import AbsenceIn, AbsenceResult, AbsencesOut, AllowanceIn, PeriodOut, VacationAccountOut
@@ -15,9 +15,14 @@ router = APIRouter(tags=["absences"])
 
 def _account(db: DB, user: User, year: int) -> VacationAccountOut:
     acc = vacation_account(db, user, year)
-    prev = vacation_account(db, user, year - 1)
+    emp = acc.employment
+    # Carry-over only within the same employment
+    same = emp is None or account_employment(db, user, year - 1) is emp
+    prev = vacation_account(db, user, year - 1, emp) if same else None
     return VacationAccountOut(
         year=acc.year,
+        employment_id=emp.id if emp else None,
+        employer=emp.employer if emp else "",
         configured=acc.configured,
         days=acc.days,
         carried_over=acc.carried_over,
@@ -25,7 +30,7 @@ def _account(db: DB, user: User, year: int) -> VacationAccountOut:
         taken=acc.taken,
         planned=acc.planned,
         remaining=acc.remaining,
-        suggested_carry_over=max(prev.remaining, 0) if prev.configured else 0,
+        suggested_carry_over=max(prev.remaining, 0) if prev and prev.configured else 0,
     )
 
 

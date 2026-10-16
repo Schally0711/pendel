@@ -8,7 +8,8 @@ from zoneinfo import ZoneInfo
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from .models import Commute, CommuteDirection, DayKind, Place, PlaceKind, User, WorkSession
+from .employments import employments
+from .models import BalanceAdjustment, Commute, CommuteDirection, DayKind, Place, PlaceKind, User, WorkSession
 from .reports import balance, evaluate_days, local_today
 
 
@@ -115,10 +116,21 @@ def day_stats(db: Session, user: User, start: date, end: date) -> list[DayStat]:
             )
 
     running = balance(db, user, start - timedelta(days=1))
+    starts = {e.start for e in employments(db, user)}
+    adjustments: dict[date, int] = defaultdict(int)
+    for a in db.scalars(
+        select(BalanceAdjustment).where(
+            BalanceAdjustment.user_id == user.id, BalanceAdjustment.day.between(start, end)
+        )
+    ):
+        adjustments[a.day] += a.minutes
     today = local_today(user)
     out = []
     for r in reports:
         res = r.result
+        if res.day in starts:
+            running = 0  # a new employment starts with an empty account
+        running += adjustments[res.day]
         # Today is not over: its target only counts as far as it has been worked, so the
         # statistics don't show a dip every morning (a missing day becomes visible tomorrow).
         target = min(res.target, res.actual) if res.day == today else res.target

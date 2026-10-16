@@ -10,15 +10,17 @@ from typing import Annotated
 from argon2 import PasswordHasher
 from argon2.exceptions import InvalidHashError, VerificationError
 from fastapi import Depends, HTTPException, Request, Response, status
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
+from . import totp
 from .config import get_settings
 from .db import get_db
-from .models import ApiToken, LoginSession, User, utcnow
+from .models import ApiToken, LoginSession, RecoveryCode, User, utcnow
 
 SESSION_COOKIE = "pendel_session"
 SESSION_LIFETIME = timedelta(days=30)
+SEEN_INTERVAL = timedelta(minutes=5)  # how often a session's last activity is written
 MIN_PASSWORD_LENGTH = 10
 
 _hasher = PasswordHasher()
@@ -64,6 +66,65 @@ def normalize_email(email: str) -> str:
     return email.strip().lower()
 
 
+def check_second_factor(db: Session, user: User, code: str | None) -> None:
+    """Raise unless the user has no 2FA or `code` is a valid TOTP or unused recovery code.
+
+    401 `totp_required` (no code given) lets the client ask for it; wrong codes are `invalid_totp`.
+    """
+    if user.totp_enabled_at is None or not user.totp_secret:
+        return
+    if not code or not code.strip():
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "totp_required")
+    step = totp.verify(user.totp_secret, code, user.totp_last_step)
+    if step is not None:
+        user.totp_last_step = step
+        db.commit()
+        return
+    recovery = db.scalar(
+        select(RecoveryCode).where(
+            RecoveryCode.user_id == user.id,
+            RecoveryCode.code_hash == totp.hash_recovery_code(code),
+            RecoveryCode.used_at.is_(None),
+        )
+    )
+    if recovery is None:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "invalid_totp")
+    recovery.used_at = utcnow()
+    db.commit()
+
+
+def disable_totp(db: Session, user: User) -> None:
+    user.totp_secret = None
+    user.totp_enabled_at = None
+    user.totp_last_step = None
+    db.execute(delete(RecoveryCode).where(RecoveryCode.user_id == user.id))
+    db.commit()
+
+
+def login(db: Session, request: Request, email: str, password: str, code: str | None) -> User:
+    """Password (+ second factor) check with rate limits per client address and per account.
+
+    The account limit only counts failures, so an attacker spreading guesses over many
+    addresses is slowed down too, while the owner logging in successfully is not affected.
+    """
+    ip, account = client_key(request), normalize_email(email)
+    login_limiter.check(ip)
+    account_limiter.check(account, record=False)
+    user = authenticate(db, email, password)
+    if user is None:
+        account_limiter.hit(account)
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "invalid_credentials")
+    try:
+        check_second_factor(db, user, code)
+    except HTTPException as e:
+        if e.detail == "invalid_totp":
+            account_limiter.hit(account)
+        raise
+    login_limiter.reset(ip)
+    account_limiter.reset(account)
+    return user
+
+
 def start_session(db: Session, user: User, request: Request, response: Response) -> None:
     token, token_hash = new_token()
     expires = utcnow() + SESSION_LIFETIME
@@ -97,13 +158,31 @@ def end_session(db: Session, request: Request, response: Response) -> None:
     response.delete_cookie(SESSION_COOKIE, path="/")
 
 
+def end_other_sessions(db: Session, user: User, keep: LoginSession | None) -> None:
+    """Log out everywhere else, e.g. after a password change or enabling 2FA."""
+    for s in db.scalars(select(LoginSession).where(LoginSession.user_id == user.id)):
+        if keep is None or s.id != keep.id:
+            db.delete(s)
+    db.commit()
+
+
+def current_session(request: Request) -> LoginSession | None:
+    """The browser session of this request (None for API tokens)."""
+    return getattr(request.state, "login_session", None)
+
+
 def _user_from_cookie(db: Session, request: Request) -> User | None:
     token = request.cookies.get(SESSION_COOKIE)
     if not token:
         return None
     session = db.scalar(select(LoginSession).where(LoginSession.token_hash == hash_token(token)))
-    if session is None or session.expires_at < utcnow():
+    now = utcnow()
+    if session is None or session.expires_at < now:
         return None
+    if session.last_seen_at is None or session.last_seen_at < now - SEEN_INTERVAL:
+        session.last_seen_at = now
+        db.commit()
+    request.state.login_session = session
     return db.get(User, session.user_id)
 
 
@@ -143,27 +222,35 @@ DB = Annotated[Session, Depends(get_db)]
 
 
 class RateLimiter:
-    """Small in-memory limiter for login attempts (per client address)."""
+    """Small in-memory limiter for login attempts (per client address or per account)."""
 
     def __init__(self, attempts: int, window_seconds: int) -> None:
         self.attempts = attempts
         self.window = window_seconds
         self._hits: dict[str, deque[float]] = defaultdict(deque)
 
-    def check(self, key: str) -> None:
+    def check(self, key: str, *, record: bool = True) -> None:
+        """Raise 429 when the limit is reached; otherwise count this attempt (unless record=False)."""
         now = time.monotonic()
         hits = self._hits[key]
         while hits and hits[0] < now - self.window:
             hits.popleft()
         if len(hits) >= self.attempts:
             raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, "too_many_attempts")
-        hits.append(now)
+        if record:
+            hits.append(now)
+        elif not hits:
+            del self._hits[key]
+
+    def hit(self, key: str) -> None:
+        self._hits[key].append(time.monotonic())
 
     def reset(self, key: str) -> None:
         self._hits.pop(key, None)
 
 
-login_limiter = RateLimiter(attempts=10, window_seconds=15 * 60)
+login_limiter = RateLimiter(attempts=10, window_seconds=15 * 60)  # attempts per client address
+account_limiter = RateLimiter(attempts=20, window_seconds=60 * 60)  # failures per account
 
 
 def client_key(request: Request) -> str:

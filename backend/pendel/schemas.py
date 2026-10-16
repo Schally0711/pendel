@@ -24,6 +24,7 @@ def _check_span(start: datetime | None, end: datetime | None) -> None:
 class Credentials(BaseModel):
     email: str = Field(min_length=3, max_length=255)
     password: str = Field(max_length=1024)
+    totp: str | None = Field(default=None, max_length=32)  # authenticator or recovery code, if 2FA is on
 
 
 class Registration(BaseModel):
@@ -47,6 +48,38 @@ class UserOut(Out):
     country: str
     subdivision: str | None
     is_admin: bool
+    totp_enabled: bool = False
+
+
+class PasswordConfirm(BaseModel):
+    password: str = Field(max_length=1024)
+    totp: str | None = Field(default=None, max_length=32)
+
+
+class TotpStatus(BaseModel):
+    enabled: bool
+    recovery_codes_left: int
+
+
+class TotpSetup(BaseModel):
+    secret: str
+    uri: str  # otpauth:// link for the QR code
+
+
+class TotpEnable(BaseModel):
+    code: str = Field(max_length=32)
+
+
+class RecoveryCodes(BaseModel):
+    codes: list[str]
+
+
+class LoginSessionOut(Out):
+    id: int
+    created_at: datetime
+    last_seen_at: datetime | None
+    user_agent: str
+    current: bool = False
 
 
 class UserUpdate(BaseModel):
@@ -130,6 +163,28 @@ class WorkModelIn(BaseModel):
 
 class WorkModelOut(Out, WorkModelIn):
     id: int
+
+
+class EmploymentIn(BaseModel):
+    employer: str = Field(default="", max_length=100)
+    start: date
+    end: date | None = None
+    note: str = Field(default="", max_length=1000)
+
+
+class EmploymentOut(Out, EmploymentIn):
+    id: int
+    current: bool = False  # covers today
+    balance: int = 0  # flexitime balance at its end (or today)
+
+
+class EmploymentSwitch(BaseModel):
+    """Change jobs: the current employment ends (default: the day before `start`)."""
+
+    employer: str = Field(default="", max_length=100)
+    start: date
+    previous_end: date | None = None
+    vacation_days: float | None = Field(default=None, ge=0, le=366)
 
 
 class AdjustmentIn(BaseModel):
@@ -331,6 +386,8 @@ class PeriodOut(BaseModel):
 
 class VacationAccountOut(BaseModel):
     year: int
+    employment_id: int | None = None  # the account belongs to this employment
+    employer: str = ""
     configured: bool
     days: float
     carried_over: float

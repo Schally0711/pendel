@@ -1,7 +1,7 @@
 {
 	"name": "pendel-frontend",
 	"private": true,
-	"version": "0.6.1",
+	"version": "0.7.0",
 	"type": "module",
 	"scripts": {
 		"dev": "vite dev",
@@ -29,5 +29,8 @@
 	},
 	"imports": {
 		"#lib/*": "./src/lib/*"
+	},
+	"dependencies": {
+		"uqr": "0.1.3"
 	}
 }

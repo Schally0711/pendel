@@ -6,7 +6,7 @@ from zoneinfo import ZoneInfo
 from sqlalchemy.orm import Session
 
 from .auth import hash_password, normalize_email
-from .models import Place, PlaceKind, User, WorkModel, utcnow
+from .models import Employment, Place, PlaceKind, User, WorkModel, utcnow
 from .schemas import Registration
 
 
@@ -20,9 +20,11 @@ def create_user(db: Session, data: Registration, *, is_admin: bool = False) -> U
     )
     today = utcnow().astimezone(ZoneInfo(user.timezone or "Europe/Berlin")).date()
     # Full time, 40 h/week, from the first of the current month so it can be filled in retroactively
-    user.work_models.append(WorkModel(valid_from=date(today.year, today.month, 1), name="Vollzeit"))
+    start = date(today.year, today.month, 1)
+    user.work_models.append(WorkModel(valid_from=start, name="Vollzeit"))
     db.add(user)
     db.flush()
+    db.add(Employment(user_id=user.id, start=start))
     home, office = ("Zuhause", "Büro") if data.locale == "de" else ("Home", "Office")
     db.add_all(
         [

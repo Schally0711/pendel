@@ -8,7 +8,7 @@
 	import { instance } from '#lib/instance.svelte.js';
 	import type { Invitation, User } from '#lib/types.js';
 	import Alert from '#lib/components/Alert.svelte';
-	import { Check, Copy, Globe, Plus, Trash2 } from '@lucide/svelte';
+	import { Check, Copy, Globe, Plus, ShieldOff, Trash2 } from '@lucide/svelte';
 
 	let invitations = $state<Invitation[]>([]);
 	let users = $state<User[]>([]);
@@ -70,6 +70,16 @@
 	async function removeInvitation(inv: Invitation) {
 		await api.del(`/admin/invitations/${inv.id}`);
 		await load();
+	}
+
+	async function resetTotp(u: User) {
+		if (!confirm(m.reset_totp_confirm({ name: u.display_name }))) return;
+		try {
+			await api.del(`/admin/users/${u.id}/totp`);
+			await load();
+		} catch (err) {
+			error = errorText(err);
+		}
 	}
 
 	async function removeUser(u: User) {
@@ -167,6 +177,14 @@
 					</span>
 					{#if u.is_admin}
 						<span class="rounded-md bg-brand-100 px-2 py-0.5 text-xs font-medium text-brand-700 dark:bg-brand-900/50 dark:text-brand-300">{m.admin_badge()}</span>
+					{/if}
+					{#if u.totp_enabled}
+						<span class="rounded-md bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300">2FA</span>
+						{#if u.id !== auth.user?.id}
+							<button class="btn-ghost p-1.5" aria-label={m.reset_totp()} title={m.reset_totp()} onclick={() => resetTotp(u)}>
+								<ShieldOff class="size-4" />
+							</button>
+						{/if}
 					{/if}
 					{#if u.id !== auth.user?.id}
 						<button class="btn-danger p-1.5" aria-label={m.delete()} onclick={() => removeUser(u)}>

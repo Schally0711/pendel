@@ -158,7 +158,10 @@
 			{#if account}
 				<div class="flex items-start justify-between gap-3">
 					<div>
-						<h2 class="text-sm font-medium muted">{m.vacation_account({ year })}</h2>
+						<h2 class="text-sm font-medium muted">
+							{m.vacation_account({ year })}{#if account.employer}
+								{' '}{m.vacation_account_employer({ employer: account.employer })}{/if}
+						</h2>
 						<div class="mt-1 flex items-baseline gap-2">
 							<span class="text-4xl font-semibold tracking-tight tabular-nums {account.remaining < 0 ? 'text-rose-600' : ''}">
 								{fmtDays(account.remaining)}

@@ -26,6 +26,30 @@ export interface User {
 	country: string;
 	subdivision: string | null;
 	is_admin: boolean;
+	totp_enabled: boolean;
+}
+
+export interface Employment {
+	id: number;
+	employer: string;
+	start: string;
+	end: string | null;
+	note: string;
+	current: boolean;
+	balance: number;
+}
+
+export interface LoginSessionInfo {
+	id: number;
+	created_at: string;
+	last_seen_at: string | null;
+	user_agent: string;
+	current: boolean;
+}
+
+export interface TotpStatus {
+	enabled: boolean;
+	recovery_codes_left: number;
 }
 
 export interface Place {
@@ -165,6 +189,8 @@ export interface AbsencePeriod {
 
 export interface VacationAccount {
 	year: number;
+	employment_id: number | null;
+	employer: string;
 	configured: boolean;
 	days: number;
 	carried_over: number;

@@ -1,15 +1,20 @@
-"""Per-user settings: places, work models, balance adjustments."""
+"""Per-user settings: places, work models, employments, balance adjustments."""
 
 import holidays
-from fastapi import APIRouter, status
+from fastapi import APIRouter, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
 from ..auth import DB, CurrentUser
-from ..models import BalanceAdjustment, Place, WorkModel
+from ..employments import EmploymentError, delete_with_data, employment_on, employments, switch, validate
+from ..models import BalanceAdjustment, Employment, Place, User, WorkModel
+from ..reports import balance, local_today
 from ..schemas import (
     AdjustmentIn,
     AdjustmentOut,
+    EmploymentIn,
+    EmploymentOut,
+    EmploymentSwitch,
     PlaceIn,
     PlaceOut,
     Subdivision,
@@ -102,6 +107,60 @@ def delete_work_model(model_id: int, user: CurrentUser, db: DB) -> None:
         raise conflict("last_work_model")
     db.delete(model)
     db.commit()
+
+
+# --- employments ---
+
+
+def _employment_out(db: DB, user: User, emp: Employment) -> EmploymentOut:
+    today = local_today(user)
+    out = EmploymentOut.model_validate(emp)
+    out.current = employment_on([emp], today) is not None
+    out.balance = balance(db, user, min(emp.end or today, today)) if emp.start <= today else 0
+    return out
+
+
+def _bad(e: EmploymentError) -> HTTPException:
+    return HTTPException(status.HTTP_400_BAD_REQUEST, str(e))
+
+
+@router.get("/employments")
+def list_employments(user: CurrentUser, db: DB) -> list[EmploymentOut]:
+    return [_employment_out(db, user, e) for e in employments(db, user)]
+
+
+@router.put("/employments/{employment_id}")
+def update_employment(employment_id: int, data: EmploymentIn, user: CurrentUser, db: DB) -> EmploymentOut:
+    emp = owned(db, Employment, employment_id, user)
+    for key, value in data.model_dump().items():
+        setattr(emp, key, value)
+    try:
+        validate(employments(db, user))
+    except EmploymentError as e:
+        db.rollback()
+        raise _bad(e) from None
+    db.commit()
+    return _employment_out(db, user, emp)
+
+
+@router.post("/employments/switch", status_code=status.HTTP_201_CREATED)
+def switch_employment(data: EmploymentSwitch, user: CurrentUser, db: DB) -> EmploymentOut:
+    try:
+        emp = switch(db, user, **data.model_dump())
+    except EmploymentError as e:
+        db.rollback()
+        raise _bad(e) from None
+    return _employment_out(db, user, emp)
+
+
+@router.delete("/employments/{employment_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_employment(employment_id: int, user: CurrentUser, db: DB) -> None:
+    """Delete an ended employment together with all data recorded within it."""
+    try:
+        delete_with_data(db, user, owned(db, Employment, employment_id, user))
+    except EmploymentError as e:
+        db.rollback()
+        raise _bad(e) from None
 
 
 # --- balance adjustments ---

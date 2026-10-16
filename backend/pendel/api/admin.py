@@ -4,7 +4,7 @@ from fastapi import APIRouter, HTTPException, status
 from sqlalchemy import select
 
 from .. import __version__
-from ..auth import DB, AdminUser, expires_in, new_token
+from ..auth import DB, AdminUser, disable_totp, end_other_sessions, expires_in, new_token
 from ..instance import PUBLIC_URL, public_url, set_value
 from ..models import Invitation, User
 from ..schemas import InstanceIn, InstanceOut, InvitationCreate, InvitationCreated, InvitationOut, UserOut
@@ -52,6 +52,16 @@ def delete_user(user_id: int, admin: AdminUser, db: DB) -> None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "not_found")
     db.delete(user)
     db.commit()
+
+
+@router.delete("/users/{user_id}/totp", status_code=status.HTTP_204_NO_CONTENT)
+def reset_totp(user_id: int, _admin: AdminUser, db: DB) -> None:
+    """Turn off 2FA for a user who lost their device and recovery codes; ends their sessions."""
+    user = db.get(User, user_id)
+    if user is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "not_found")
+    disable_totp(db, user)
+    end_other_sessions(db, user, None)
 
 
 @router.put("/instance")

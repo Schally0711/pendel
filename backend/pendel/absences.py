@@ -6,7 +6,8 @@ from datetime import date
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
-from .models import VACATION_DAYS, DayEntry, DayKind, User, VacationAllowance
+from .employments import employment_on, employments, latest_started
+from .models import VACATION_DAYS, DayEntry, DayKind, Employment, User, VacationAllowance
 from .reports import local_today, schedule
 
 DEFAULT_VACATION_DAYS = 30.0
@@ -25,6 +26,7 @@ class Period:
 @dataclass
 class VacationAccount:
     year: int
+    employment: Employment | None
     configured: bool
     days: float
     carried_over: float
@@ -109,22 +111,40 @@ def _days_between(a: date, b: date) -> list[date]:
     return [date.fromordinal(o) for o in range(a.toordinal() + 1, b.toordinal())]
 
 
-def vacation_account(db: Session, user: User, year: int) -> VacationAccount:
-    allowance = db.scalar(
-        select(VacationAllowance).where(VacationAllowance.user_id == user.id, VacationAllowance.year == year)
-    )
+def account_employment(db: Session, user: User, year: int) -> Employment | None:
+    """The employment whose vacation account is shown for `year`: the current one for this year,
+    otherwise the last one that started before the year ended (or the first one for earlier years)."""
+    emps = employments(db, user)
+    today = local_today(user)
+    if today.year == year and (current := employment_on(emps, today)):
+        return current
+    return latest_started(emps, date(year, 12, 31)) or (emps[0] if emps else None)
+
+
+def vacation_account(
+    db: Session, user: User, year: int, employment: Employment | None = None
+) -> VacationAccount:
+    """Vacation account of one year, limited to one employment's days (each job has its own)."""
+    emp = employment or account_employment(db, user, year)
+    query = select(VacationAllowance).where(VacationAllowance.user_id == user.id)
+    if emp is not None:
+        query = query.where(VacationAllowance.employment_id == emp.id)
+    allowance = db.scalar(query.where(VacationAllowance.year == year))
     if allowance is None:
         previous = db.scalar(
-            select(VacationAllowance)
-            .where(VacationAllowance.user_id == user.id, VacationAllowance.year < year)
-            .order_by(VacationAllowance.year.desc())
+            query.where(VacationAllowance.year < year).order_by(VacationAllowance.year.desc())
         )
         days, carried, configured = (previous.days if previous else DEFAULT_VACATION_DAYS), 0.0, False
     else:
         days, carried, configured = allowance.days, allowance.carried_over, True
 
     start, end = date(year, 1, 1), date(year, 12, 31)
-    working = set(workdays(db, user, start, end))
+    if emp is not None:
+        # The first employment also covers vacation from before it was recorded
+        if emp is not employments(db, user)[0]:
+            start = max(start, emp.start)
+        end = min(end, emp.end or end)
+    working = set(workdays(db, user, start, end)) if start <= end else set()
     today = local_today(user)
     taken = planned = 0.0
     for e in db.scalars(
@@ -140,15 +160,20 @@ def vacation_account(db: Session, user: User, year: int) -> VacationAccount:
             taken += VACATION_DAYS[e.kind]
         else:
             planned += VACATION_DAYS[e.kind]
-    return VacationAccount(year, configured, days, carried, taken, planned)
+    return VacationAccount(year, emp, configured, days, carried, taken, planned)
 
 
 def set_allowance(db: Session, user: User, year: int, days: float, carried_over: float) -> VacationAllowance:
+    emp = account_employment(db, user, year)
+    if emp is None:
+        raise ValueError("no employment")
     allowance = db.scalar(
-        select(VacationAllowance).where(VacationAllowance.user_id == user.id, VacationAllowance.year == year)
+        select(VacationAllowance).where(
+            VacationAllowance.employment_id == emp.id, VacationAllowance.year == year
+        )
     )
     if allowance is None:
-        allowance = VacationAllowance(user_id=user.id, year=year)
+        allowance = VacationAllowance(user_id=user.id, employment_id=emp.id, year=year)
         db.add(allowance)
     allowance.days = days
     allowance.carried_over = carried_over

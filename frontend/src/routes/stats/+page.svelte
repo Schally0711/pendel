@@ -5,7 +5,7 @@
 	import { auth } from '#lib/session.svelte.js';
 	import { dayKindLabel } from '#lib/labels.js';
 	import { addDays, formatDate, hm, localDate, signedHm } from '#lib/time.js';
-	import type { DayKind, Stats, TaxOverview, WorkModel } from '#lib/types.js';
+	import type { DayKind, Employment, Stats, TaxOverview, WorkModel } from '#lib/types.js';
 	import LineChart from '#lib/charts/LineChart.svelte';
 	import ColumnChart from '#lib/charts/ColumnChart.svelte';
 	import ShareBar from '#lib/charts/ShareBar.svelte';
@@ -39,8 +39,22 @@
 	const years = $derived(Array.from({ length: year - firstYear + 1 }, (_, i) => year - i));
 	const yearRange = (y: number) => ({ from: `${y}-01-01`, to: y === year ? today : `${y}-12-31` });
 
+	// Whole employments as ranges (only worth offering once there is more than one)
+	let emps = $state<Employment[]>([]);
+	api.get<Employment[]>('/employments').then((e) => (emps = e.length > 1 ? e.reverse() : []));
+	const empRange = (id: number) => {
+		const e = emps.find((x) => x.id === id)!;
+		return { from: e.start, to: e.end && e.end < today ? e.end : today };
+	};
+
+	function rangeOf(key: string) {
+		if (key.startsWith('y:')) return yearRange(Number(key.slice(2)));
+		if (key.startsWith('e:')) return empRange(Number(key.slice(2)));
+		return presets.find((x) => x.key === key)!;
+	}
+
 	$effect(() => {
-		const range = preset.startsWith('y:') ? yearRange(Number(preset.slice(2))) : presets.find((x) => x.key === preset)!;
+		const range = rangeOf(preset);
 		api.get<Stats>('/stats', { from: range.from, to: range.to }).then((s) => (stats = s));
 	});
 
@@ -126,18 +140,25 @@
 				>
 			{/each}
 			<select
-				class="rounded-lg border-0 py-1.5 pr-7 pl-3 text-sm font-medium transition {preset.startsWith('y:')
+				class="rounded-lg border-0 py-1.5 pr-7 pl-3 text-sm font-medium transition {preset.includes(':')
 					? 'bg-brand-600 text-white'
 					: 'bg-transparent text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'}"
 				aria-label={m.range_year()}
-				value={preset.startsWith('y:') ? preset : ''}
+				value={preset.includes(':') ? preset : ''}
 				onchange={(e) => {
 					const v = e.currentTarget.value;
-					if (v) [preset, taxYear] = [v, Number(v.slice(2))];
+					if (!v) return;
+					preset = v;
+					if (v.startsWith('y:')) taxYear = Number(v.slice(2));
 				}}
 			>
 				<option value="" disabled>{m.range_year()}</option>
 				{#each years as y (y)}<option value="y:{y}">{y}</option>{/each}
+				{#if emps.length}
+					<optgroup label={m.range_employment()}>
+						{#each emps as e (e.id)}<option value="e:{e.id}">{e.employer || m.employer_unnamed()}</option>{/each}
+					</optgroup>
+				{/if}
 			</select>
 		</div>
 	</div>

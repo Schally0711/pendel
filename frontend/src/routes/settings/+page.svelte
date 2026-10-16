@@ -9,6 +9,8 @@
 	import type { Adjustment, Place, PlaceKind, Subdivision, User, WorkModel } from '#lib/types.js';
 	import Alert from '#lib/components/Alert.svelte';
 	import Integrations from '#lib/components/Integrations.svelte';
+	import Employments from '#lib/components/Employments.svelte';
+	import Security from '#lib/components/Security.svelte';
 	import { Plus, Trash2, Users } from '@lucide/svelte';
 
 	type Status = { message: string | null; tone: 'error' | 'success' };
@@ -209,6 +211,8 @@
 			<Alert message={status.profile?.message ?? null} tone={status.profile?.tone} />
 		</div>
 	</form>
+
+	<Employments onchange={() => loadModels()} />
 
 	<!-- Work model -->
 	{#if model}
@@ -429,4 +433,6 @@
 			<Alert message={status.password?.message ?? null} tone={status.password?.tone} />
 		</div>
 	</form>
+
+	<Security />
 </div>

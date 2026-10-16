@@ -5,7 +5,7 @@ from datetime import timedelta
 from fastapi import APIRouter, HTTPException, Request, status
 from sqlalchemy import select
 
-from ..auth import DB, CurrentUser, authenticate, client_key, login_limiter, new_token
+from ..auth import DB, CurrentUser, login, new_token
 from ..automation import ZONE_ENTER, ZONE_LEAVE, expand_zone_change, process, recent_duplicate
 from ..models import ApiToken, Event, utcnow
 from ..schemas import EventIn, EventOut, EventResult, TokenCreate, TokenCreated, TokenLogin, TokenOut
@@ -79,12 +79,7 @@ def create_token(data: TokenCreate, user: CurrentUser, db: DB) -> TokenCreated:
 @router.post("/auth/token", status_code=status.HTTP_201_CREATED)
 def login_for_token(data: TokenLogin, request: Request, db: DB) -> TokenCreated:
     """Create an API token with e-mail and password, e.g. from the Home Assistant setup dialog."""
-    key = client_key(request)
-    login_limiter.check(key)
-    user = authenticate(db, data.email, data.password)
-    if user is None:
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "invalid_credentials")
-    login_limiter.reset(key)
+    user = login(db, request, data.email, data.password, data.totp)
     token, token_hash = new_token()
     row = ApiToken(user_id=user.id, name=data.name.strip(), token_hash=token_hash)
     db.add(row)

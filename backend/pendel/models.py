@@ -95,8 +95,31 @@ class User(Base):
     subdivision: Mapped[str | None] = mapped_column(String(8), default="NW")  # e.g. NW = Nordrhein-Westfalen
     is_admin: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+    # Two-factor authentication (TOTP). The secret is set during setup and only active once
+    # totp_enabled_at is set; totp_last_step blocks reusing a code within its time window.
+    totp_secret: Mapped[str | None] = mapped_column(String(64))
+    totp_enabled_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
+    totp_last_step: Mapped[int | None] = mapped_column(Integer)
 
     work_models: Mapped[list["WorkModel"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+
+    @property
+    def totp_enabled(self) -> bool:
+        return self.totp_enabled_at is not None
+
+
+class Employment(Base):
+    """An employment (job). The flexitime balance and the vacation account start fresh with each one;
+    days outside every employment have no target. Ended employments stay as an archive."""
+
+    __tablename__ = "employments"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    employer: Mapped[str] = mapped_column(String(100), default="")
+    start: Mapped[date] = mapped_column(Date)
+    end: Mapped[date | None] = mapped_column(Date)  # None = current employment
+    note: Mapped[str] = mapped_column(Text, default="")
 
 
 class WorkModel(Base):
@@ -274,6 +297,18 @@ class LoginSession(Base):
     created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
     expires_at: Mapped[datetime] = mapped_column(UTCDateTime)
     user_agent: Mapped[str] = mapped_column(String(255), default="")
+    last_seen_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
+
+
+class RecoveryCode(Base):
+    """One-time recovery code for two-factor authentication (only the hash is stored)."""
+
+    __tablename__ = "recovery_codes"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    code_hash: Mapped[str] = mapped_column(String(64), unique=True)
+    used_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
 
 
 class Invitation(Base):
@@ -292,13 +327,14 @@ class Invitation(Base):
 
 
 class VacationAllowance(Base):
-    """Vacation entitlement of one year."""
+    """Vacation entitlement of one year within one employment."""
 
     __tablename__ = "vacation_allowances"
-    __table_args__ = (UniqueConstraint("user_id", "year"),)
+    __table_args__ = (UniqueConstraint("employment_id", "year"),)
 
     id: Mapped[int] = mapped_column(primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    employment_id: Mapped[int] = mapped_column(ForeignKey("employments.id", ondelete="CASCADE"), index=True)
     year: Mapped[int] = mapped_column(Integer)
     days: Mapped[float] = mapped_column(Float, default=30)
     carried_over: Mapped[float] = mapped_column(Float, default=0)  # remaining days from the previous year

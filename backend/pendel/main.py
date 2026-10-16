@@ -63,6 +63,16 @@ def create_app() -> FastAPI:
             return JSONResponse({"detail": "csrf_header_missing"}, status_code=403)
         return await call_next(request)
 
+    @app.middleware("http")
+    async def security_headers(request: Request, call_next):
+        response = await call_next(request)
+        response.headers.setdefault("X-Content-Type-Options", "nosniff")
+        response.headers.setdefault("X-Frame-Options", "DENY")
+        response.headers.setdefault("Referrer-Policy", "same-origin")
+        if request.url.path.startswith("/api/"):
+            response.headers.setdefault("Cache-Control", "no-store")
+        return response
+
     _mount_spa(app, get_settings().static_dir)
     return app
 
