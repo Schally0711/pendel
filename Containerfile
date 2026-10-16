@@ -2,7 +2,7 @@
 # Build: docker build -f Containerfile -t pendel .
 
 # --- Frontend build ---
-FROM docker.io/library/node:24-alpine AS frontend
+FROM docker.io/library/node:25-alpine AS frontend
 WORKDIR /src
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci
