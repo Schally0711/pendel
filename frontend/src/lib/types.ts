@@ -72,7 +72,6 @@ export interface WorkModel {
 	target_fri: number;
 	target_sat: number;
 	target_sun: number;
-	flexitime: boolean;
 	break_mode: BreakMode;
 	auto_break_minutes: number;
 	auto_break_min_work_minutes: number;

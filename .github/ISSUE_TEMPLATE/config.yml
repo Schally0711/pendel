@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Sicherheitslücke melden / Report a vulnerability
+    url: https://github.com/Schally0711/pendel/security/advisories/new
+    about: Bitte nicht öffentlich melden / Please report privately
+  - name: Home-Assistant-Integration
+    url: https://github.com/Schally0711/pendel-homeassistant/issues
+    about: Fehler und Ideen zur Integration / Issues with the HA integration

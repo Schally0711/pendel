@@ -53,7 +53,6 @@ Unter **Einstellungen → Arbeitszeitmodell**:
 - **Pausenregel** (siehe [Pausen](#pausen))
 - **Abwesenheit vom Büro:** bis zu welcher Dauer das Verlassen und Wiederkommen ins Büro als Pause zählt (Standard 90 min)
 - **Arbeitsweg zählt als Arbeitszeit (%)**: Anteil der Pendelzeit, der als Arbeitszeit gutgeschrieben wird (Standard 0 %)
-- **Gleitzeit:** Schalter zur Beschreibung des Modells. Das Gleitzeitkonto wird derzeit immer geführt.
 
 Unter **Region & Zeitzone** stehen Bundesland (für Feiertage) und Zeitzone (wann ein Tag beginnt).
 

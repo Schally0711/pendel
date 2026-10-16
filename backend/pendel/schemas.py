@@ -160,7 +160,6 @@ class WorkModelIn(BaseModel):
     target_fri: int = Field(default=480, ge=0, le=1440)
     target_sat: int = Field(default=0, ge=0, le=1440)
     target_sun: int = Field(default=0, ge=0, le=1440)
-    flexitime: bool = True
     break_mode: BreakMode = BreakMode.MANUAL
     auto_break_minutes: int = Field(default=30, ge=0, le=480)
     auto_break_min_work_minutes: int = Field(default=0, ge=0, le=1440)

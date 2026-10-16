@@ -1,0 +1,42 @@
+name: Fehler melden / Bug report
+description: Etwas funktioniert nicht wie erwartet / Something doesn't work as expected
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: Was ist passiert? / What happened?
+      description: Was hast du erwartet, was ist stattdessen passiert? / What did you expect instead?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Schritte zum Nachstellen / Steps to reproduce
+      placeholder: |
+        1. …
+        2. …
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: z. B. aus `https://<pendel>/api/health` / e.g. from `/api/health`
+      placeholder: 0.9.0
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: Installation
+      options: [Docker / Compose, Podman, Installationspaket (ohne Docker), Andere / other]
+  - type: input
+    id: client
+    attributes:
+      label: Browser / Gerät / device
+      placeholder: Chrome 140 auf Android, Safari iOS 26, …
+  - type: textarea
+    id: logs
+    attributes:
+      label: Log-Ausschnitt / logs
+      description: "`docker logs pendel` bzw. `journalctl -u pendel` – bitte E-Mail-Adressen und Tokens entfernen."
+      render: text

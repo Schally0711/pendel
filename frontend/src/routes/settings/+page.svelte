@@ -238,7 +238,6 @@
 				</div>
 			</div>
 
-			{@render toggle(m.flexitime(), model.flexitime, (v) => (model.flexitime = v))}
 
 			<div class="space-y-3 rounded-2xl bg-slate-50 p-4 dark:bg-slate-800/50">
 				<div class="label">{m.break_rule()}</div>

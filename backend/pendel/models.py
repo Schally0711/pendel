@@ -142,8 +142,6 @@ class WorkModel(Base):
     target_sat: Mapped[int] = mapped_column(Integer, default=0)
     target_sun: Mapped[int] = mapped_column(Integer, default=0)
 
-    flexitime: Mapped[bool] = mapped_column(Boolean, default=True)
-
     break_mode: Mapped[BreakMode] = mapped_column(_enum(BreakMode), default=BreakMode.MANUAL)
     auto_break_minutes: Mapped[int] = mapped_column(Integer, default=30)
     # Auto break is only deducted when the gross work time reaches this many minutes (0 = always)

@@ -108,7 +108,6 @@
 	"model_name": "Name",
 	"weekly_hours": "{hours} hours per week",
 	"hours_per_day": "Hours per weekday",
-	"flexitime": "Flexitime",
 	"break_rule": "Break rule",
 	"break_mode_manual": "Record breaks manually",
 	"break_mode_auto": "Deduct a fixed break automatically",
