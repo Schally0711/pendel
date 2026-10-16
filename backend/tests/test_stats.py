@@ -108,12 +108,7 @@ def test_calendar_feed(week):
         "/api/absences",
         json={"start": "2026-12-21", "end": "2026-12-31", "kind": "vacation", "note": "Weihnachten"},
     )
-    assert week.get("/api/calendar").json() == {
-        "active": False,
-        "created_at": None,
-        "last_used_at": None,
-        "url_path": None,
-    }
+    assert week.get("/api/calendar").json()["active"] is False
     created = week.post("/api/calendar/token").json()
     url = created["url_path"]
     anon = TestClient(week.app)

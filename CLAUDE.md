@@ -18,6 +18,7 @@ Pendel is a self-hosted work time tracker (home office vs. office days, commute 
 - Browser auth = session cookie (`pendel_session`, token hashed in `login_sessions`). Automations use `Authorization: Bearer <api token>`.
 - CSRF guard (`main.py`): cookie-authenticated POST/PUT/PATCH/DELETE under `/api/` must send `X-Requested-With: pendel` (the frontend `api.ts` client does this; tests set it as default header).
 - Every user-owned row is loaded via `api/common.owned()` → 404 for other users' data.
+- Instance settings (`instance.py`, table `app_settings`): `public_url` (admin UI, `PUT /api/admin/instance`; falls back to `PENDEL_PUBLIC_URL`) is the external base for invitation/calendar/HA links; the frontend reads it via `GET /api/instance` (`lib/instance.svelte.ts`, `instance.baseUrl`). Pendel works fully behind proxies/tunnels; trusted proxies = `PENDEL_FORWARDED_ALLOW_IPS` (uvicorn `--forwarded-allow-ips`).
 - `/api/today` and `/api/report` feed the UI; the balance ignores days after the user's local today.
 
 ## Frontend structure

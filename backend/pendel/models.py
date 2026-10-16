@@ -302,3 +302,12 @@ class VacationAllowance(Base):
     year: Mapped[int] = mapped_column(Integer)
     days: Mapped[float] = mapped_column(Float, default=30)
     carried_over: Mapped[float] = mapped_column(Float, default=0)  # remaining days from the previous year
+
+
+class AppSetting(Base):
+    """Instance-wide settings editable by admins (key/value)."""
+
+    __tablename__ = "app_settings"
+
+    key: Mapped[str] = mapped_column(String(64), primary_key=True)
+    value: Mapped[str] = mapped_column(Text, default="")

@@ -294,5 +294,13 @@
 	"calendar_stop": "Stop subscription",
 	"kpi_home_of": "{home} of {total} days",
 	"kpi_earliest": "earliest {t}",
-	"kpi_latest": "latest {t}"
+	"kpi_latest": "latest {t}",
+	"instance": "Instance",
+	"public_url": "Public address",
+	"public_url_help": "Address under which Pendel is reachable from outside (e.g. via a Cloudflare tunnel or reverse proxy). Used for invitations, the calendar subscription and the Home Assistant setup. Leave empty if Pendel only runs on your home network.",
+	"public_url_invalid": "Please enter an address like https://pendel.example.com (without a path).",
+	"calendar_text_public": "Time off and holidays as a calendar on your phone or in your calendar app. The address contains a secret key that can only read the calendar.",
+	"calendar_google": "Subscribe in Google Calendar",
+	"calendar_webcal": "Open in calendar app",
+	"version": "Version {v}"
 }

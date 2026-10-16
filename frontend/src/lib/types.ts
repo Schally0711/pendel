@@ -276,4 +276,5 @@ export interface CalendarStatus {
 	created_at: string | null;
 	last_used_at: string | null;
 	url_path: string | null;
+	public_url: string | null;
 }

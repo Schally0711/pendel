@@ -15,8 +15,10 @@ PENDEL_DATA_DIR=/var/lib/pendel
 PENDEL_STATIC_DIR=/opt/pendel/static
 # Keep true behind an HTTPS reverse proxy
 PENDEL_SECURE_COOKIES=true
-# Addresses of trusted reverse proxies (for real client IPs), comma separated
+# Addresses of trusted reverse proxies / cloudflared (for real client IPs), comma separated
 PENDEL_FORWARDED_ALLOW_IPS=127.0.0.1
+# Optional default for the public address; can also be set in the UI (Admin → Instance)
+#PENDEL_PUBLIC_URL=https://pendel.example.com
 PENDEL_PORT=8000
 ENV
 	chmod 640 /etc/pendel/pendel.env

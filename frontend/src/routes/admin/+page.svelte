@@ -5,9 +5,10 @@
 	import { api } from '#lib/api.js';
 	import { auth } from '#lib/session.svelte.js';
 	import { errorText } from '#lib/errors.js';
+	import { instance } from '#lib/instance.svelte.js';
 	import type { Invitation, User } from '#lib/types.js';
 	import Alert from '#lib/components/Alert.svelte';
-	import { Check, Copy, Plus, Trash2 } from '@lucide/svelte';
+	import { Check, Copy, Globe, Plus, Trash2 } from '@lucide/svelte';
 
 	let invitations = $state<Invitation[]>([]);
 	let users = $state<User[]>([]);
@@ -20,7 +21,25 @@
 	const fmt = (iso: string) =>
 		new Intl.DateTimeFormat(getLocale(), { dateStyle: 'medium', timeZone: auth.tz }).format(new Date(iso));
 
+	let publicUrl = $state('');
+	let instanceMsg = $state<{ text: string; tone: 'error' | 'success' } | null>(null);
+
+	async function saveInstance(e: SubmitEvent) {
+		e.preventDefault();
+		instanceMsg = null;
+		try {
+			const r = await api.put<{ public_url: string | null }>('/admin/instance', { public_url: publicUrl || null });
+			await instance.load(true);
+			publicUrl = r.public_url ?? '';
+			instanceMsg = { text: m.saved(), tone: 'success' };
+		} catch {
+			instanceMsg = { text: m.public_url_invalid(), tone: 'error' };
+		}
+	}
+
 	async function load() {
+		await instance.load();
+		publicUrl = instance.publicUrl ?? '';
 		[invitations, users] = await Promise.all([
 			api.get<Invitation[]>('/admin/invitations'),
 			api.get<User[]>('/admin/users')
@@ -33,7 +52,7 @@
 		error = null;
 		try {
 			const inv = await api.post<Invitation>('/admin/invitations', { note, valid_days: validDays });
-			link = `${location.origin}/invite/${inv.token}`;
+			link = `${instance.baseUrl}/invite/${inv.token}`;
 			copied = false;
 			note = '';
 			await load();
@@ -68,6 +87,25 @@
 
 <div class="space-y-6">
 	<h1 class="text-2xl font-semibold tracking-tight">{m.admin_title()}</h1>
+
+	<form class="card space-y-3" onsubmit={saveInstance}>
+		<div class="flex items-start gap-3">
+			<div class="rounded-xl bg-brand-50 p-2 text-brand-600 dark:bg-brand-900/40 dark:text-brand-400"><Globe class="size-5" /></div>
+			<div>
+				<h2 class="section-title mb-1">{m.instance()}</h2>
+				<p class="text-sm muted">{m.public_url_help()}</p>
+			</div>
+		</div>
+		<div class="flex flex-wrap items-end gap-2">
+			<div class="min-w-64 flex-1">
+				<label class="label" for="purl">{m.public_url()}</label>
+				<input id="purl" class="input" type="url" placeholder="https://pendel.example.com" bind:value={publicUrl} />
+			</div>
+			<button class="btn-primary">{m.save()}</button>
+		</div>
+		{#if instanceMsg}<Alert message={instanceMsg.text} tone={instanceMsg.tone} />{/if}
+		{#if instance.version}<p class="text-xs muted">{m.version({ v: instance.version })}</p>{/if}
+	</form>
 
 	<section class="card space-y-4">
 		<h2 class="section-title">{m.invitations()}</h2>

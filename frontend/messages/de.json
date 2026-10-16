@@ -294,5 +294,13 @@
 	"calendar_stop": "Abo beenden",
 	"kpi_home_of": "{home} von {total} Tagen",
 	"kpi_earliest": "frühestens {t}",
-	"kpi_latest": "spätestens {t}"
+	"kpi_latest": "spätestens {t}",
+	"instance": "Instanz",
+	"public_url": "Öffentliche Adresse",
+	"public_url_help": "Adresse, unter der Pendel von außen erreichbar ist (z. B. über einen Cloudflare Tunnel oder Reverse-Proxy). Wird für Einladungen, Kalender-Abo und die Home-Assistant-Einrichtung verwendet. Leer lassen, wenn Pendel nur im Heimnetz läuft.",
+	"public_url_invalid": "Bitte eine Adresse wie https://pendel.example.com eingeben (ohne Pfad).",
+	"calendar_text_public": "Abwesenheiten und Feiertage als Kalender auf dem Handy oder im Kalenderprogramm. Die Adresse enthält einen geheimen Schlüssel, der nur den Kalender lesen darf.",
+	"calendar_google": "In Google Kalender abonnieren",
+	"calendar_webcal": "In Kalender-App öffnen",
+	"version": "Version {v}"
 }

@@ -15,6 +15,8 @@ class Settings(BaseSettings):
     static_dir: Path = Path("../frontend/build")
     # Set to false only for plain-HTTP setups without a TLS reverse proxy
     secure_cookies: bool = True
+    # Default for the public address (e.g. a Cloudflare tunnel); admins can override it in the UI.
+    public_url: str | None = None
 
     @property
     def effective_database_url(self) -> str:

@@ -500,3 +500,26 @@ class CalendarStatus(BaseModel):
     created_at: datetime | None = None
     last_used_at: datetime | None = None
     url_path: str | None = None  # only right after creation
+    public_url: str | None = None  # base address for subscriptions from outside (PENDEL_PUBLIC_URL)
+
+
+class InstanceOut(BaseModel):
+    version: str
+    public_url: str | None
+
+
+class InstanceIn(BaseModel):
+    public_url: str | None = Field(default=None, max_length=255)
+
+    @field_validator("public_url")
+    @classmethod
+    def _valid_url(cls, v: str | None) -> str | None:
+        if not v or not v.strip():
+            return None
+        from urllib.parse import urlsplit
+
+        v = v.strip().rstrip("/")
+        parts = urlsplit(v)
+        if parts.scheme not in ("http", "https") or not parts.hostname or parts.path or parts.query:
+            raise ValueError("expected an address like https://pendel.example.com")
+        return v

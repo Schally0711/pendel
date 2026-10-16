@@ -6,6 +6,7 @@
 	import { auth } from '#lib/session.svelte.js';
 	import { errorText } from '#lib/errors.js';
 	import type { ApiTokenInfo } from '#lib/types.js';
+	import { instance } from '#lib/instance.svelte.js';
 	import Alert from './Alert.svelte';
 	import { Check, Copy, House, KeyRound, Plus, Trash2 } from '@lucide/svelte';
 
@@ -16,7 +17,10 @@
 	let error = $state<string | null>(null);
 
 	const load = async () => (tokens = await api.get<ApiTokenInfo[]>('/tokens'));
-	onMount(load);
+	onMount(() => {
+		load();
+		instance.load();
+	});
 
 	async function create(e: SubmitEvent) {
 		e.preventDefault();
@@ -47,7 +51,7 @@
 			new Date(iso)
 		);
 
-	const origin = typeof location !== 'undefined' ? location.origin : '';
+	const origin = $derived(instance.baseUrl);
 	// Revoked tokens are history only; keep the list short
 	const active = $derived(tokens.filter((t) => !t.revoked_at));
 	const steps = $derived([m.ha_step_install(), m.ha_step_add(), m.ha_step_login(), m.ha_step_zones()]);

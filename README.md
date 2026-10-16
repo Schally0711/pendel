@@ -49,6 +49,20 @@ On first visit you create the admin account; further people join via invitation 
 
 Pendel is a PWA: on Android open it in Chrome and choose "Install app".
 
+## Reverse proxy, Cloudflare Tunnel, public address
+
+Pendel can run behind any reverse proxy (nginx, Nginx Proxy Manager, Caddy, Traefik) or a Cloudflare Tunnel:
+
+- Point the proxy/tunnel at `http://<pendel-host>:8000`; HTTPS terminates at the proxy. Keep `PENDEL_SECURE_COOKIES=true`
+  (only set it to `false` for plain HTTP without TLS).
+- Set `PENDEL_FORWARDED_ALLOW_IPS` in `/etc/pendel/pendel.env` to the address(es) of your proxy/`cloudflared`
+  (comma separated) so login rate limiting and logs see the real client IP. Restart with `systemctl restart pendel`.
+- Enter the external address under **Admin → Instance → Public address** (or set `PENDEL_PUBLIC_URL`). Pendel uses it for
+  invitation links, the calendar subscription (incl. "Subscribe in Google Calendar") and the Home Assistant setup hint.
+- **Cloudflare Access:** browsers can log in through Access, but Home Assistant and calendar apps cannot. If you put
+  Access in front of Pendel, add a *Bypass* policy for `/api/*` – the API is protected by Pendel's own session/API tokens –
+  or at least for `/api/calendar.ics` and `/api/events`.
+
 ## Automation (Home Assistant & co.)
 
 **Home Assistant:** use the integration [pendel-homeassistant](https://github.com/Schally0711/pendel-homeassistant) – setup via the UI, no YAML.

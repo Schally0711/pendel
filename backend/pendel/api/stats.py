@@ -11,6 +11,7 @@ from sqlalchemy import select
 
 from ..absences import periods as absence_periods
 from ..auth import DB, CurrentUser, hash_token, new_token
+from ..instance import public_url
 from ..models import ApiToken, DayKind, User, utcnow
 from ..reports import holiday_calendar
 from ..schemas import CalendarStatus, StatsOut, TaxOut
@@ -163,9 +164,12 @@ def _calendar_token(db: DB, user: User) -> ApiToken | None:
 @router.get("/calendar")
 def calendar_status(user: CurrentUser, db: DB) -> CalendarStatus:
     token = _calendar_token(db, user)
+    public = public_url(db)
     if token is None:
-        return CalendarStatus(active=False)
-    return CalendarStatus(active=True, created_at=token.created_at, last_used_at=token.last_used_at)
+        return CalendarStatus(active=False, public_url=public)
+    return CalendarStatus(
+        active=True, created_at=token.created_at, last_used_at=token.last_used_at, public_url=public
+    )
 
 
 @router.post("/calendar/token", status_code=status.HTTP_201_CREATED)
@@ -177,7 +181,12 @@ def calendar_create(user: CurrentUser, db: DB) -> CalendarStatus:
     row = ApiToken(user_id=user.id, name="Kalender-Abo", token_hash=token_hash, scope=CALENDAR_SCOPE)
     db.add(row)
     db.commit()
-    return CalendarStatus(active=True, created_at=row.created_at, url_path=f"/api/calendar.ics?token={token}")
+    return CalendarStatus(
+        active=True,
+        created_at=row.created_at,
+        url_path=f"/api/calendar.ics?token={token}",
+        public_url=public_url(db),
+    )
 
 
 @router.delete("/calendar/token", status_code=status.HTTP_204_NO_CONTENT)

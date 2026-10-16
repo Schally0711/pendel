@@ -3,9 +3,11 @@
 from fastapi import APIRouter, HTTPException, status
 from sqlalchemy import select
 
+from .. import __version__
 from ..auth import DB, AdminUser, expires_in, new_token
+from ..instance import PUBLIC_URL, public_url, set_value
 from ..models import Invitation, User
-from ..schemas import InvitationCreate, InvitationCreated, InvitationOut, UserOut
+from ..schemas import InstanceIn, InstanceOut, InvitationCreate, InvitationCreated, InvitationOut, UserOut
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -50,3 +52,9 @@ def delete_user(user_id: int, admin: AdminUser, db: DB) -> None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "not_found")
     db.delete(user)
     db.commit()
+
+
+@router.put("/instance")
+def update_instance(data: InstanceIn, _admin: AdminUser, db: DB) -> InstanceOut:
+    set_value(db, PUBLIC_URL, data.public_url)
+    return InstanceOut(version=__version__, public_url=public_url(db))

@@ -81,3 +81,23 @@ def test_change_password(admin):
         "/api/me/password", json={"current_password": PASSWORD, "new_password": "another password"}
     )
     assert ok.status_code == 204
+
+
+def test_instance_public_url(admin, monkeypatch):
+    assert admin.get("/api/instance").json()["public_url"] is None
+    monkeypatch.setenv("PENDEL_PUBLIC_URL", "https://env.example.org")
+    from pendel.config import get_settings
+
+    get_settings.cache_clear()
+    assert admin.get("/api/instance").json()["public_url"] == "https://env.example.org"
+    r = admin.put("/api/admin/instance", json={"public_url": "https://pendel.example.com/"})
+    assert r.json()["public_url"] == "https://pendel.example.com"  # stored value wins, no trailing slash
+    assert admin.put("/api/admin/instance", json={"public_url": "pendel.example.com"}).status_code == 422
+    assert admin.put("/api/admin/instance", json={"public_url": "https://x.org/sub"}).status_code == 422
+    assert (
+        admin.put("/api/admin/instance", json={"public_url": ""}).json()["public_url"]
+        == "https://env.example.org"
+    )
+    created = admin.post("/api/calendar/token").json()
+    assert created["public_url"] == "https://env.example.org"
+    get_settings.cache_clear()

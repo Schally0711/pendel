@@ -4,6 +4,7 @@ import holidays
 from fastapi import APIRouter, HTTPException, Request, Response, status
 from sqlalchemy import func, select
 
+from .. import __version__
 from ..auth import (
     DB,
     CurrentUser,
@@ -17,9 +18,11 @@ from ..auth import (
     start_session,
     verify_password,
 )
+from ..instance import public_url
 from ..models import Invitation, User, utcnow
 from ..schemas import (
     Credentials,
+    InstanceOut,
     InvitationCheck,
     PasswordChange,
     Registration,
@@ -49,6 +52,12 @@ def setup(data: Registration, request: Request, response: Response, db: DB) -> U
     user = create_user(db, data, is_admin=True)
     start_session(db, user, request, response)
     return UserOut.model_validate(user)
+
+
+@router.get("/instance")
+def instance(_user: CurrentUser, db: DB) -> InstanceOut:
+    """Instance info for the UI (public address for links)."""
+    return InstanceOut(version=__version__, public_url=public_url(db))
 
 
 @router.post("/auth/login")
