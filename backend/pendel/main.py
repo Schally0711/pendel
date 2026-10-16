@@ -20,6 +20,8 @@ NO_CACHE = {"index.html", "service-worker.js", "manifest.webmanifest"}
 
 mimetypes.add_type("application/manifest+json", ".webmanifest")
 CSRF_HEADER = "x-requested-with"
+# Credential exchange without a cookie session: nothing a forged cross-site request could abuse
+CSRF_EXEMPT = {"/api/auth/token"}
 
 
 @api.get("/health")
@@ -55,6 +57,7 @@ def create_app() -> FastAPI:
             request.method in UNSAFE_METHODS
             and request.url.path.startswith("/api/")
             and "authorization" not in request.headers
+            and request.url.path not in CSRF_EXEMPT
             and request.headers.get(CSRF_HEADER) != "pendel"
         ):
             return JSONResponse({"detail": "csrf_header_missing"}, status_code=403)

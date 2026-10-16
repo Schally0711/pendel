@@ -48,7 +48,10 @@ Pendel is a PWA: on Android open it in Chrome and choose "Install app".
 
 ## Automation (Home Assistant & co.)
 
-Create an API token under *Settings → Integrations* (or on the server: `/opt/pendel/venv/bin/python -m pendel.cli create-token <email> <name>`),
+**Home Assistant:** use the integration [pendel-homeassistant](https://github.com/Schally0711/pendel-homeassistant) – setup via the UI, no YAML.
+Integrations can obtain a token with `POST /api/auth/token` (`email`, `password`, `name`).
+
+For other automations create an API token under *Settings → Integrations* (or on the server: `/opt/pendel/venv/bin/python -m pendel.cli create-token <email> <name>`),
 set the zone names of your places (e.g. home = `home`, office = `Work`), then send location events:
 
 ```http

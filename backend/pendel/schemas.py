@@ -388,6 +388,12 @@ class TokenCreate(BaseModel):
     name: str = Field(min_length=1, max_length=100)
 
 
+class TokenLogin(Credentials):
+    """Exchange e-mail + password for an API token (for integrations; no cookie session)."""
+
+    name: str = Field(min_length=1, max_length=100)
+
+
 class TokenOut(Out):
     id: int
     name: str

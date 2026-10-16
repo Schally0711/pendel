@@ -152,3 +152,17 @@ def test_cli_create_token(admin, tmp_path, capsys):
     c = TestClient(admin.app, headers={"Authorization": f"Bearer {token}"})
     assert c.get("/api/me").json()["email"] == "admin@example.org"
     assert main(["create-token", "nobody@example.org", "x"]) == 1
+
+
+def test_token_via_password(admin):
+    guest = TestClient(admin.app)  # no cookie, no CSRF header – like an integration
+    r = guest.post("/api/auth/token", json={"email": "admin@example.org", "password": "wrong", "name": "HA"})
+    assert r.status_code == 401
+    r = guest.post(
+        "/api/auth/token",
+        json={"email": "admin@example.org", "password": "correct horse battery", "name": "HA"},
+    )
+    assert r.status_code == 201
+    c = TestClient(admin.app, headers={"Authorization": f"Bearer {r.json()['token']}"})
+    assert c.get("/api/me").status_code == 200
+    assert "pendel_session" not in r.cookies
