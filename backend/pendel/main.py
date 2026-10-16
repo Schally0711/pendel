@@ -1,3 +1,4 @@
+import mimetypes
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -14,6 +15,10 @@ from .db import migrate
 api = APIRouter(prefix="/api")
 
 UNSAFE_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
+# Files that must be revalidated on every load so new deployments are picked up
+NO_CACHE = {"index.html", "service-worker.js", "manifest.webmanifest"}
+
+mimetypes.add_type("application/manifest+json", ".webmanifest")
 CSRF_HEADER = "x-requested-with"
 
 
@@ -69,9 +74,10 @@ def _mount_spa(app: FastAPI, static_dir: Path) -> None:
     @app.get("/{path:path}", include_in_schema=False)
     def spa(path: str) -> FileResponse:
         file = (static_dir / path).resolve()
-        if path and file.is_file() and file.is_relative_to(static_dir.resolve()):
-            return FileResponse(file)
-        return FileResponse(index)
+        if not (path and file.is_file() and file.is_relative_to(static_dir.resolve())):
+            file = index
+        headers = {"Cache-Control": "no-cache"} if file.name in NO_CACHE else None
+        return FileResponse(file, headers=headers)
 
 
 app = create_app()

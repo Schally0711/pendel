@@ -8,6 +8,8 @@ Pendel is a self-hosted work time tracker (home office vs. office days, commute 
 
 - `backend/` – FastAPI + SQLAlchemy 2 + SQLite (Alembic for migrations). Package `pendel`. All HTTP endpoints live under `/api`; in production the backend also serves the built SPA (`PENDEL_STATIC_DIR`) with an `index.html` fallback for client-side routes (`pendel/main.py`).
 - `frontend/` – SvelteKit (Svelte 5 runes) as a pure SPA (`adapter-static`, `ssr = false`), Tailwind CSS 4, i18n via Paraglide (`messages/de.json`, `messages/en.json`; German is the base locale, no locale in URLs). The dev server proxies `/api` to `127.0.0.1:8000`.
+- `deploy/` – `build-release.sh` (tarball with wheel + built SPA + installer into `dist/`), `install.sh` (idempotent install/update on Debian: user `pendel`, venv in `/opt/pendel`, data `/var/lib/pendel`, env `/etc/pendel/pendel.env`, health check), `pendel.service` (hardened systemd unit, uvicorn with proxy headers).
+- PWA: `static/manifest.webmanifest`, icons rendered from `frontend/assets/icon.svg` via `assets/render-icons.py` (Playwright), `src/service-worker.ts` caches the app shell only, never `/api/`. SvelteKit 3 removed `$service-worker`: use `$app/manifest` (`immutable`, `assets`) and `$app/env` (`version`). Backend serves `index.html`, `service-worker.js`, `manifest.webmanifest` with `Cache-Control: no-cache`.
 - `Containerfile` – multi-stage build producing one image (frontend build copied into the Python image), data in `/data`.
 
 ## Auth & API

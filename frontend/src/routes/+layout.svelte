@@ -19,8 +19,10 @@
 	onMount(async () => {
 		const { needed } = await api.get<{ needed: boolean }>('/setup');
 		if (needed) {
+			// navigate first, otherwise the login redirect below would win
+			await goto('/setup');
 			ready = true;
-			return goto('/setup');
+			return;
 		}
 		await auth.load();
 		ready = true;

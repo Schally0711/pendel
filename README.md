@@ -30,6 +30,21 @@ npm install
 npm run dev
 ```
 
+## Installation (Debian/Ubuntu, e.g. a Proxmox LXC)
+
+```bash
+deploy/build-release.sh                 # on a build machine with Node 24 + Python ≥ 3.13
+# copy dist/pendel-<version>.tar.gz to the server, then as root:
+tar -xzf pendel-<version>.tar.gz && pendel-<version>/install.sh
+```
+
+Runs as systemd service `pendel` on port 8000; data in `/var/lib/pendel`, settings in `/etc/pendel/pendel.env`.
+Put it behind an HTTPS reverse proxy and set `PENDEL_FORWARDED_ALLOW_IPS` to the proxy address.
+Re-running `install.sh` with a newer release updates in place; the database is migrated on startup.
+On first visit you create the admin account; further people join via invitation links.
+
+Pendel is a PWA: on Android open it in Chrome and choose "Install app".
+
 ## Container
 
 ```bash

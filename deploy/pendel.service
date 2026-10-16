@@ -1,0 +1,26 @@
+[Unit]
+Description=Pendel work time tracking
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=pendel
+Group=pendel
+EnvironmentFile=/etc/pendel/pendel.env
+ExecStart=/opt/pendel/venv/bin/uvicorn pendel.main:app --host 0.0.0.0 --port ${PENDEL_PORT} \
+    --proxy-headers --forwarded-allow-ips ${PENDEL_FORWARDED_ALLOW_IPS} --no-server-header
+Restart=on-failure
+RestartSec=3
+
+# Hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/var/lib/pendel
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+
+[Install]
+WantedBy=multi-user.target
