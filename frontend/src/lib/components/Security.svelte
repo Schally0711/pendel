@@ -34,6 +34,9 @@
 	};
 	onMount(load);
 
+	/** Refresh the lists, e.g. after a password change signed out other devices. */
+	export const reload = load;
+
 	function open(s: Step) {
 		step = s;
 		password = '';
@@ -129,7 +132,7 @@
 		>
 			<ShieldCheck class="size-5" />
 		</span>
-		<div class="min-w-0 flex-1">
+		<div class="min-w-0 flex-1 basis-60">
 			<div class="font-medium">{m.totp_title()}</div>
 			<p class="text-sm muted">
 				{status?.enabled ? m.totp_on_text({ n: status.recovery_codes_left }) : m.totp_off_text()}

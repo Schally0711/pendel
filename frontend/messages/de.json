@@ -357,5 +357,8 @@
 	"reset_totp": "2FA zurücksetzen",
 	"reset_totp_confirm": "Zwei-Faktor-Anmeldung für {name} ausschalten? Alle Sitzungen dieses Kontos werden beendet.",
 	"range_employment": "Arbeitsverhältnis",
-	"vacation_account_employer": "bei {employer}"
+	"vacation_account_employer": "bei {employer}",
+	"account": "Konto",
+	"region": "Region & Zeitzone",
+	"region_text": "Bestimmt die Feiertage und wann für dich ein Tag beginnt."
 }

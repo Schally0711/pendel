@@ -357,5 +357,8 @@
 	"reset_totp": "Reset 2FA",
 	"reset_totp_confirm": "Turn off two-factor authentication for {name}? All sessions of this account are ended.",
 	"range_employment": "Employment",
-	"vacation_account_employer": "at {employer}"
+	"vacation_account_employer": "at {employer}",
+	"account": "Account",
+	"region": "Region & time zone",
+	"region_text": "Determines public holidays and when your day starts."
 }

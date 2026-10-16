@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { m } from '#lib/paraglide/messages.js';
-	import { getLocale, setLocale } from '#lib/paraglide/runtime.js';
+	import { getLocale } from '#lib/paraglide/runtime.js';
 	import { api } from '#lib/api.js';
 	import { auth } from '#lib/session.svelte.js';
 	import { errorText } from '#lib/errors.js';
@@ -10,8 +10,7 @@
 	import Alert from '#lib/components/Alert.svelte';
 	import Integrations from '#lib/components/Integrations.svelte';
 	import Employments from '#lib/components/Employments.svelte';
-	import Security from '#lib/components/Security.svelte';
-	import { Plus, Trash2, Users } from '@lucide/svelte';
+	import { Plus, Trash2 } from '@lucide/svelte';
 
 	type Status = { message: string | null; tone: 'error' | 'success' };
 	const status = $state<Record<string, Status>>({});
@@ -23,16 +22,14 @@
 		status[key] = { message: errorText(e), tone: 'error' };
 	}
 
-	// --- profile ---
-	let profile = $state({ display_name: '', locale: 'de', subdivision: '', timezone: '' });
+	// --- region (holidays, day boundaries) ---
+	let profile = $state({ subdivision: '', timezone: '' });
 	let subdivisions = $state<Subdivision[]>([]);
 
 	async function saveProfile(e: SubmitEvent) {
 		e.preventDefault();
 		try {
-			const u = await api.patch<User>('/me', profile);
-			auth.set(u);
-			if (u.locale !== getLocale()) setLocale(u.locale);
+			auth.set(await api.patch<User>('/me', profile));
 			ok('profile');
 		} catch (err) {
 			fail('profile', err);
@@ -132,22 +129,9 @@
 		adjustments = adjustments.filter((x) => x.id !== a.id);
 	}
 
-	// --- password ---
-	let pw = $state({ current_password: '', new_password: '' });
-	async function changePassword(e: SubmitEvent) {
-		e.preventDefault();
-		try {
-			await api.post('/me/password', pw);
-			pw = { current_password: '', new_password: '' };
-			ok('password');
-		} catch (err) {
-			fail('password', err);
-		}
-	}
-
 	onMount(async () => {
 		const u = auth.user!;
-		profile = { display_name: u.display_name, locale: u.locale, subdivision: u.subdivision ?? '', timezone: u.timezone };
+		profile = { subdivision: u.subdivision ?? '', timezone: u.timezone };
 		newAdj.day = localDate(new Date(), auth.tz);
 		[subdivisions, places, adjustments] = await Promise.all([
 			api.get<Subdivision[]>('/meta/subdivisions'),
@@ -171,28 +155,15 @@
 {/snippet}
 
 <div class="space-y-6">
-	<div class="flex items-center justify-between gap-3">
-		<h1 class="text-2xl font-semibold tracking-tight">{m.settings_title()}</h1>
-		{#if auth.user?.is_admin}
-			<a href="/admin" class="btn-secondary md:hidden"><Users class="size-4" />{m.nav_admin()}</a>
-		{/if}
-	</div>
+	<h1 class="text-2xl font-semibold tracking-tight">{m.settings_title()}</h1>
 
-	<!-- Profile -->
+	<!-- Region -->
 	<form class="card space-y-4" onsubmit={saveProfile}>
-		<h2 class="section-title">{m.profile()}</h2>
+		<div>
+			<h2 class="section-title mb-1">{m.region()}</h2>
+			<p class="text-sm muted">{m.region_text()}</p>
+		</div>
 		<div class="grid gap-4 sm:grid-cols-2">
-			<div>
-				<label class="label" for="name">{m.display_name()}</label>
-				<input id="name" class="input" bind:value={profile.display_name} required />
-			</div>
-			<div>
-				<label class="label" for="locale">{m.language()}</label>
-				<select id="locale" class="input" bind:value={profile.locale}>
-					<option value="de">Deutsch</option>
-					<option value="en">English</option>
-				</select>
-			</div>
 			<div>
 				<label class="label" for="state">{m.state()}</label>
 				<select id="state" class="input" bind:value={profile.subdivision}>
@@ -414,25 +385,4 @@
 		</form>
 		<div class="mt-2"><Alert message={status.adjustments?.message ?? null} tone={status.adjustments?.tone} /></div>
 	</section>
-
-	<!-- Password -->
-	<form class="card space-y-4" onsubmit={changePassword}>
-		<h2 class="section-title">{m.change_password()}</h2>
-		<div class="grid gap-4 sm:grid-cols-2">
-			<div>
-				<label class="label" for="cpw">{m.current_password()}</label>
-				<input id="cpw" type="password" class="input" bind:value={pw.current_password} required autocomplete="current-password" />
-			</div>
-			<div>
-				<label class="label" for="npw">{m.new_password()}</label>
-				<input id="npw" type="password" class="input" bind:value={pw.new_password} required minlength="10" autocomplete="new-password" />
-			</div>
-		</div>
-		<div class="flex items-center gap-3">
-			<button class="btn-primary">{m.save()}</button>
-			<Alert message={status.password?.message ?? null} tone={status.password?.tone} />
-		</div>
-	</form>
-
-	<Security />
 </div>

@@ -6,7 +6,7 @@
 	import { api, isPublicPath } from '#lib/api.js';
 	import { auth } from '#lib/session.svelte.js';
 	import favicon from '#lib/assets/favicon.svg';
-	import { Clock, CalendarDays, ChartColumn, Palmtree, Settings, Users, LogOut } from '@lucide/svelte';
+	import { Clock, CalendarDays, ChartColumn, Palmtree, Settings, Users } from '@lucide/svelte';
 	import './layout.css';
 	import type { LayoutProps } from './$types';
 
@@ -43,12 +43,6 @@
 	function active(href: string) {
 		return href === '/' ? page.url.pathname === '/' : page.url.pathname.startsWith(href);
 	}
-
-	async function logout() {
-		await api.post('/auth/logout');
-		auth.set(null);
-		goto('/login');
-	}
 </script>
 
 <svelte:head>
@@ -80,10 +74,19 @@
 						>
 					{/each}
 				</nav>
-				<button class="btn-ghost ml-auto px-2.5" onclick={logout} title={m.logout()}>
-					<span class="hidden text-sm sm:inline">{auth.user.display_name}</span>
-					<LogOut class="size-4" />
-				</button>
+				<a
+					href="/account"
+					class="ml-auto flex items-center gap-2 rounded-full py-1 pr-1 pl-3 text-sm font-medium transition hover:bg-white dark:hover:bg-slate-800 {active('/account')
+						? 'bg-white text-brand-700 shadow-sm dark:bg-slate-800 dark:text-brand-400'
+						: 'text-slate-600 dark:text-slate-300'}"
+					title={m.account()}
+				>
+					<span class="hidden sm:inline">{auth.user.display_name}</span>
+					<span
+						class="grid size-8 place-items-center rounded-full bg-brand-100 font-semibold text-brand-700 dark:bg-brand-900/50 dark:text-brand-300"
+						>{auth.user.display_name.slice(0, 1).toUpperCase()}</span
+					>
+				</a>
 			</div>
 		</header>
 
