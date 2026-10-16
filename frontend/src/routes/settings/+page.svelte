@@ -295,7 +295,11 @@
 		<h2 class="section-title">{m.places()}</h2>
 		<div class="space-y-3">
 			{#each places as p (p.id)}
-				<div class="grid gap-2 rounded-2xl p-3 ring-1 ring-slate-200 sm:grid-cols-[1fr_9rem_8rem_1fr_auto] sm:items-end dark:ring-slate-700">
+				<div
+					class="grid gap-2 rounded-2xl p-3 ring-1 ring-slate-200 sm:grid-cols-[1fr_9rem_8rem_1fr_auto_auto] sm:items-end dark:ring-slate-700 {p.archived
+						? 'opacity-60'
+						: ''}"
+				>
 					<div>
 						<label class="label" for="pn{p.id}">{m.place_name()}</label>
 						<input id="pn{p.id}" class="input" bind:value={p.name} onchange={() => savePlace(p)} />
@@ -335,11 +339,24 @@
 							}}
 						/>
 					</div>
+					<label class="flex items-center gap-2 py-2.5 text-sm" title={m.place_archived_hint()}>
+						<input
+							type="checkbox"
+							class="size-4 accent-brand-600"
+							checked={p.archived}
+							onchange={(e) => {
+								p.archived = e.currentTarget.checked;
+								savePlace(p);
+							}}
+						/>
+						{m.place_archived()}
+					</label>
 					<button class="btn-danger p-2.5" aria-label={m.delete()} onclick={() => deletePlace(p)}>
 						<Trash2 class="size-4" />
 					</button>
 				</div>
 			{/each}
+			<p class="text-xs muted">{m.place_archived_hint()}</p>
 		</div>
 		<div class="mt-3 flex items-center gap-3">
 			<button class="btn-secondary" onclick={addPlace}><Plus class="size-4" />{m.add_place()}</button>

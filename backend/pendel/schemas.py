@@ -130,6 +130,24 @@ class InvitationCreated(InvitationOut):
     token: str  # shown only once
 
 
+class AdminUserUpdate(BaseModel):
+    is_admin: bool
+
+
+class PasswordResetCreated(BaseModel):
+    token: str  # shown only once
+    expires_at: datetime
+
+
+class PasswordResetCheck(BaseModel):
+    valid: bool
+    display_name: str = ""
+
+
+class PasswordResetIn(BaseModel):
+    new_password: str = Field(min_length=MIN_PASSWORD_LENGTH, max_length=1024)
+
+
 class InvitationCheck(BaseModel):
     valid: bool
     note: str = ""

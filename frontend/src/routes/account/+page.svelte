@@ -8,7 +8,8 @@
 	import type { User } from '#lib/types.js';
 	import Alert from '#lib/components/Alert.svelte';
 	import Security from '#lib/components/Security.svelte';
-	import { LogOut, Users } from '@lucide/svelte';
+	import Modal from '#lib/components/Modal.svelte';
+	import { Download, LogOut, Monitor, Moon, Sun, Trash2, Users } from '@lucide/svelte';
 
 	type Status = { message: string | null; tone: 'error' | 'success' };
 	const status = $state<Record<string, Status>>({});
@@ -33,6 +34,17 @@
 		}
 	}
 
+	let theme = $state<ThemeMode>(window.pendelTheme?.get() ?? 'system');
+	function setTheme(mode: ThemeMode) {
+		theme = mode;
+		window.pendelTheme?.set(mode);
+	}
+	const themes = $derived([
+		{ mode: 'system' as const, label: m.theme_system(), icon: Monitor },
+		{ mode: 'light' as const, label: m.theme_light(), icon: Sun },
+		{ mode: 'dark' as const, label: m.theme_dark(), icon: Moon }
+	]);
+
 	let pw = $state({ current_password: '', new_password: '' });
 	let security: Security;
 	async function changePassword(e: SubmitEvent) {
@@ -44,6 +56,22 @@
 			security?.reload(); // other devices were signed out
 		} catch (err) {
 			fail('password', err);
+		}
+	}
+
+	// delete the own account
+	let deleting = $state(false);
+	let del = $state({ password: '', totp: '' });
+	let delError = $state<string | null>(null);
+	async function deleteAccount(e: SubmitEvent) {
+		e.preventDefault();
+		delError = null;
+		try {
+			await api.post('/me/delete', { password: del.password, totp: del.totp || null });
+			auth.set(null);
+			goto('/login');
+		} catch (err) {
+			delError = errorText(err);
 		}
 	}
 
@@ -94,6 +122,28 @@
 		</div>
 	</form>
 
+	<section class="card space-y-3">
+		<div>
+			<h2 class="section-title mb-1">{m.appearance()}</h2>
+			<p class="text-sm muted">{m.appearance_text()}</p>
+		</div>
+		<div class="inline-flex flex-wrap gap-1 rounded-xl bg-slate-100 p-1 dark:bg-slate-800" role="radiogroup" aria-label={m.appearance()}>
+			{#each themes as t (t.mode)}
+				<button
+					type="button"
+					role="radio"
+					aria-checked={theme === t.mode}
+					class="flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium transition {theme === t.mode
+						? 'bg-white text-brand-700 shadow-sm dark:bg-slate-900 dark:text-brand-400'
+						: 'text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white'}"
+					onclick={() => setTheme(t.mode)}
+				>
+					<t.icon class="size-4" />{t.label}
+				</button>
+			{/each}
+		</div>
+	</section>
+
 	<form class="card space-y-4" onsubmit={changePassword}>
 		<h2 class="section-title">{m.change_password()}</h2>
 		<div class="grid gap-4 sm:grid-cols-2">
@@ -113,4 +163,38 @@
 	</form>
 
 	<Security bind:this={security} />
+
+	<section class="card space-y-3">
+		<div>
+			<h2 class="section-title mb-1">{m.your_data()}</h2>
+			<p class="text-sm muted">{m.your_data_text()}</p>
+		</div>
+		<div class="flex flex-wrap gap-2">
+			<a class="btn-secondary" href="/api/me/export" download><Download class="size-4" />{m.export_data()}</a>
+			<button class="btn-danger" onclick={() => ((deleting = true), (delError = null))}><Trash2 class="size-4" />{m.delete_account()}</button>
+		</div>
+	</section>
 </div>
+
+{#if deleting}
+	<Modal title={m.delete_account()} onclose={() => (deleting = false)}>
+		<form class="space-y-4" onsubmit={deleteAccount}>
+			<p class="text-sm">{m.delete_account_text()}</p>
+			<div>
+				<label class="label" for="del-pw">{m.password()}</label>
+				<input id="del-pw" type="password" class="input" bind:value={del.password} required autocomplete="current-password" />
+			</div>
+			{#if auth.user?.totp_enabled}
+				<div>
+					<label class="label" for="del-code">{m.totp_code()}</label>
+					<input id="del-code" class="input font-mono" bind:value={del.totp} required autocomplete="one-time-code" />
+				</div>
+			{/if}
+			<Alert message={delError} />
+			<div class="flex justify-end gap-2">
+				<button type="button" class="btn-ghost" onclick={() => (deleting = false)}>{m.cancel()}</button>
+				<button class="btn-danger">{m.delete_account_button()}</button>
+			</div>
+		</form>
+	</Modal>
+{/if}

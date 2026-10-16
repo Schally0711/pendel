@@ -66,6 +66,9 @@ Danach:
 3. **Einstellungen → Arbeitsverhältnisse:** Arbeitgeber und Eintrittsdatum eintragen (optional).
 4. **Verwaltung:** Einladungslinks für weitere Personen erstellen. Eine offene Registrierung gibt es nicht.
 
+Ziehst du mit einer bestehenden Instanz um, wähle stattdessen *Stattdessen eine Sicherung einspielen* – siehe
+[Update & Backup](update-und-backup.md#sicherung-über-die-oberfläche).
+
 Mehr zur Bedienung in [bedienung.md](bedienung.md).
 
 ## Zugriff von außen: Reverse Proxy und Tunnel

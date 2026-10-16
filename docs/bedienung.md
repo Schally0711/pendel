@@ -118,7 +118,9 @@ mit leerem Konto und übernimmt dein Arbeitszeitmodell ab dem ersten Tag – das
 
 ## Orte und Arbeitsweg
 
-**Einstellungen → Orte** enthält dein Zuhause und dein Büro (weitere Orte lassen sich hinzufügen):
+**Einstellungen → Orte** enthält dein Zuhause und dein Büro (weitere Orte lassen sich hinzufügen, nicht mehr
+benötigte – z. B. das Büro des früheren Arbeitgebers – *archivieren*: Sie verschwinden aus der Auswahl und werden von der
+Automatik ignoriert, alte Einträge behalten ihren Ort):
 
 - **Entfernung (km)** zum Büro – für die Entfernungspauschale in der Steuerübersicht
 - **Zone** – der Name, mit dem eine Automatisierung den Ort meldet (z. B. `zone.home` aus Home Assistant oder der
@@ -160,9 +162,17 @@ widerrufen werden kann.
 
 ## Konto, Verwaltung, mehrere Personen
 
-- **Konto** (Klick auf deinen Namen oben rechts): Name, Sprache, Passwort, Zwei-Faktor-Anmeldung, angemeldete Geräte,
-  Abmelden. Details in [Sicherheit & Datenschutz](sicherheit-und-datenschutz.md).
-- **Verwaltung** (nur Admins): Einladungslinks erstellen (7 Tage gültig, einmal verwendbar), Personen und ihre
-  Zwei-Faktor-Anmeldung verwalten, öffentliche Adresse der Instanz.
+- **Konto** (Klick auf deinen Namen oben rechts): Name, Sprache, **Darstellung** (System, Hell oder Dunkel – pro Gerät),
+  Passwort, Zwei-Faktor-Anmeldung, angemeldete Geräte, Abmelden. Unter *Deine Daten* lädst du alles herunter, was Pendel
+  über dich speichert (JSON), oder löschst dein Konto mit allen Daten. Details in
+  [Sicherheit & Datenschutz](sicherheit-und-datenschutz.md).
+- **Verwaltung** (nur Admins):
+  - Einladungslinks erstellen (standardmäßig 7 Tage gültig, einmal verwendbar)
+  - **Passwort vergessen?** Über das Schlüssel-Symbol bei einer Person einen Link zum Zurücksetzen erzeugen
+    (24 Stunden gültig, einmal verwendbar) und ihr selbst schicken – Pendel versendet keine E-Mails
+  - Admin-Rechte geben oder entziehen (Krone), Zwei-Faktor-Anmeldung zurücksetzen, Personen löschen – es bleibt
+    immer mindestens ein Admin
+  - öffentliche Adresse der Instanz, **Sicherung herunterladen und einspielen**
+    (siehe [Update & Backup](update-und-backup.md#sicherung-über-die-oberfläche))
 
 Jede Person sieht ausschließlich ihre eigenen Daten – auch Admins sehen keine Zeiten anderer.

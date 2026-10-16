@@ -1,5 +1,7 @@
 """First-run setup, login/logout, own account, accepting invitations."""
 
+import json
+
 import holidays
 from fastapi import APIRouter, HTTPException, Request, Response, status
 from sqlalchemy import delete, func, select
@@ -7,6 +9,7 @@ from sqlalchemy import delete, func, select
 from .. import __version__, totp
 from ..auth import (
     DB,
+    SESSION_COOKIE,
     CurrentUser,
     check_second_factor,
     client_key,
@@ -22,8 +25,9 @@ from ..auth import (
     start_session,
     verify_password,
 )
+from ..export import user_export
 from ..instance import public_url
-from ..models import Invitation, LoginSession, RecoveryCode, User, utcnow
+from ..models import Invitation, LoginSession, PasswordReset, RecoveryCode, User, utcnow
 from ..schemas import (
     Credentials,
     InstanceOut,
@@ -31,6 +35,8 @@ from ..schemas import (
     LoginSessionOut,
     PasswordChange,
     PasswordConfirm,
+    PasswordResetCheck,
+    PasswordResetIn,
     RecoveryCodes,
     Registration,
     SetupIn,
@@ -68,6 +74,21 @@ def setup(data: SetupIn, request: Request, response: Response, db: DB) -> UserOu
     user = create_user(db, Registration(**data.model_dump(exclude={"setup_code"})), is_admin=True)
     start_session(db, user, request, response)
     return UserOut.model_validate(user)
+
+
+@router.post("/setup/restore", status_code=status.HTTP_204_NO_CONTENT)
+async def setup_restore(request: Request, db: DB) -> None:
+    """Fresh instance: restore a backup instead of creating the first account (setup code in the
+    X-Setup-Code header, the backup file as raw body)."""
+    if not _no_users(db):
+        raise HTTPException(status.HTTP_409_CONFLICT, "already_set_up")
+    login_limiter.check(client_key(request))
+    if not check_setup_code(request.headers.get("x-setup-code")):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "invalid_setup_code")
+    db.close()
+    from .admin import _restore_upload
+
+    await _restore_upload(request)
 
 
 @router.get("/instance")
@@ -112,6 +133,33 @@ def change_password(data: PasswordChange, request: Request, user: CurrentUser, d
     user.password_hash = hash_password(data.new_password)
     db.commit()
     end_other_sessions(db, user, current_session(request))
+
+
+# --- own data: export and deletion ---
+
+
+@router.get("/me/export")
+def export_me(user: CurrentUser, db: DB) -> Response:
+    """Everything stored about the current user as JSON (no passwords or tokens)."""
+    body = json.dumps(user_export(db, user), ensure_ascii=False, indent=2)
+    name = f"pendel-export-{utcnow():%Y-%m-%d}.json"
+    return Response(
+        body, media_type="application/json", headers={"Content-Disposition": f'attachment; filename="{name}"'}
+    )
+
+
+@router.post("/me/delete", status_code=status.HTTP_204_NO_CONTENT)
+def delete_me(data: PasswordConfirm, response: Response, user: CurrentUser, db: DB) -> None:
+    """Delete the own account with all data. The last admin can't leave while others remain."""
+    _confirm(db, user, data)
+    if user.is_admin:
+        others = db.scalar(select(func.count(User.id)).where(User.id != user.id)) or 0
+        admins = db.scalar(select(func.count(User.id)).where(User.id != user.id, User.is_admin)) or 0
+        if others and not admins:
+            raise HTTPException(status.HTTP_409_CONFLICT, "last_admin")
+    db.delete(user)
+    db.commit()
+    response.delete_cookie(SESSION_COOKIE, path="/")
 
 
 # --- login sessions ---
@@ -214,6 +262,34 @@ def totp_recovery_codes(data: PasswordConfirm, user: CurrentUser, db: DB) -> Rec
         raise HTTPException(status.HTTP_409_CONFLICT, "totp_not_enabled")
     _confirm(db, user, data)
     return RecoveryCodes(codes=_new_recovery_codes(db, user))
+
+
+def _open_reset(db: DB, token: str) -> PasswordReset | None:
+    row = db.scalar(select(PasswordReset).where(PasswordReset.token_hash == hash_token(token)))
+    if row is None or row.used_at is not None or row.expires_at < utcnow():
+        return None
+    return row
+
+
+@router.get("/password-reset/{token}")
+def check_password_reset(token: str, db: DB) -> PasswordResetCheck:
+    row = _open_reset(db, token)
+    user = db.get(User, row.user_id) if row else None
+    return PasswordResetCheck(valid=user is not None, display_name=user.display_name if user else "")
+
+
+@router.post("/password-reset/{token}", status_code=status.HTTP_204_NO_CONTENT)
+def use_password_reset(token: str, data: PasswordResetIn, request: Request, db: DB) -> None:
+    """Set a new password with an admin's reset link. Signs out everywhere; 2FA stays as it is."""
+    login_limiter.check(client_key(request))
+    row = _open_reset(db, token)
+    user = db.get(User, row.user_id) if row else None
+    if row is None or user is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "reset_link_invalid")
+    user.password_hash = hash_password(data.new_password)
+    row.used_at = utcnow()
+    db.commit()
+    end_other_sessions(db, user, None)
 
 
 def _open_invitation(db: DB, token: str) -> Invitation | None:

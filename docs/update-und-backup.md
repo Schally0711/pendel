@@ -28,7 +28,22 @@ Die letzten fünf dieser automatischen Sicherungen bleiben erhalten. Was sich in
 **Welches Image-Tag?** `0.9` bekommt nur Fehlerbehebungen der Version 0.9 und ist die sichere Wahl.
 `latest` nimmt auch neue Versionen mit, die größere Änderungen bringen können.
 
-## Sicherung
+## Sicherung über die Oberfläche
+
+Unter **Verwaltung → Sicherung der Instanz** lädt ein Admin die komplette Datenbank herunter
+(`pendel-backup-<datum>.db`) – mit allen Personen, Zeiten, Einstellungen, Passwörtern (als Hash) und Tokens.
+Damit lässt sich Pendel umziehen oder neu aufsetzen:
+
+- **Neue Instanz:** Auf der Einrichtungsseite den Einrichtungscode eingeben und *Stattdessen eine Sicherung
+  einspielen* wählen. Danach meldet sich jeder mit seinem bisherigen Konto an; auch Home Assistant und andere
+  Integrationen funktionieren mit ihren Tokens weiter (Adresse ggf. anpassen).
+- **Bestehende Instanz:** *Sicherung einspielen* in der Verwaltung ersetzt **alle** Daten (Bestätigung mit Passwort).
+  Die bisherige Datenbank wird vorher als `backups/pendel-before-restore-…db` gesichert.
+
+Sicherungen älterer Versionen werden beim Einspielen automatisch auf die aktuelle Version gebracht; Sicherungen
+einer neueren Version lehnt Pendel ab. Die Datei enthält alle Daten – bewahre sie entsprechend sicher auf.
+
+## Sicherung auf dem Server
 
 Eine Kopie von `pendel.db` mit `cp`, während Pendel läuft, ist **nicht zuverlässig**: SQLite schreibt neue Daten
 zunächst in eine Nebendatei (`pendel.db-wal`). Nimm stattdessen den eingebauten Befehl – er erzeugt eine

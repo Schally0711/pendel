@@ -1,6 +1,9 @@
 @import 'tailwindcss';
 @import '@fontsource-variable/inter';
 
+/* Dark mode follows <html data-theme>, set by static/theme.js (system / light / dark per device) */
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
 @theme {
 	--font-sans: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
 	--color-brand-50: oklch(0.97 0.025 182);
@@ -24,16 +27,14 @@
 	--c-axis: #cbd5e1;
 	--c-line: oklch(0.54 0.105 182);
 }
-@media (prefers-color-scheme: dark) {
-	:root {
-		--c-office: #3987e5;
-		--c-home: #d95926;
-		--c-absence: #199e70;
-		--c-travel: #c98500;
-		--c-grid: #1e293b;
-		--c-axis: #334155;
-		--c-line: oklch(0.72 0.12 182);
-	}
+:root[data-theme='dark'] {
+	--c-office: #3987e5;
+	--c-home: #d95926;
+	--c-absence: #199e70;
+	--c-travel: #c98500;
+	--c-grid: #1e293b;
+	--c-axis: #334155;
+	--c-line: oklch(0.72 0.12 182);
 }
 
 @theme inline {
@@ -44,8 +45,11 @@
 }
 
 html {
-	color-scheme: light dark;
+	color-scheme: light;
 	-webkit-tap-highlight-color: transparent;
+}
+html[data-theme='dark'] {
+	color-scheme: dark;
 }
 
 body {

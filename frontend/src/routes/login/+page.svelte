@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { page } from '$app/state';
 	import { m } from '#lib/paraglide/messages.js';
 	import { api, ApiError } from '#lib/api.js';
 	import { auth } from '#lib/session.svelte.js';
@@ -33,6 +34,11 @@
 
 <AuthCard title={m.login_title()}>
 	<form class="space-y-4" {onsubmit}>
+		{#if page.url.searchParams.has('reset')}
+			<Alert message={m.reset_done()} tone="success" />
+		{:else if page.url.searchParams.has('restored')}
+			<Alert message={m.restore_done()} tone="success" />
+		{/if}
 		<div>
 			<label class="label" for="email">{m.email()}</label>
 			<input id="email" class="input" type="email" bind:value={email} required autocomplete="username" />

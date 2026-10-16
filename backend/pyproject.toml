@@ -1,6 +1,6 @@
 [project]
 name = "pendel"
-version = "0.9.0"
+version = "0.9.1"
 description = "Work time tracking for home office and office days, including commute tracking"
 requires-python = ">=3.13"
 dependencies = [

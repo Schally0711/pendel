@@ -8,7 +8,8 @@
 	import { instance } from '#lib/instance.svelte.js';
 	import type { Invitation, User } from '#lib/types.js';
 	import Alert from '#lib/components/Alert.svelte';
-	import { Check, Copy, Globe, Plus, ShieldOff, Trash2 } from '@lucide/svelte';
+	import InstanceBackup from '#lib/components/InstanceBackup.svelte';
+	import { Check, Copy, Crown, Globe, KeyRound, Plus, ShieldOff, Trash2 } from '@lucide/svelte';
 
 	let invitations = $state<Invitation[]>([]);
 	let users = $state<User[]>([]);
@@ -70,6 +71,38 @@
 	async function removeInvitation(inv: Invitation) {
 		await api.del(`/admin/invitations/${inv.id}`);
 		await load();
+	}
+
+	// one-time link to set a new password (Pendel sends no e-mails: the admin passes it on)
+	let resetFor = $state<{ name: string; link: string } | null>(null);
+	let resetCopied = $state(false);
+	async function passwordLink(u: User) {
+		error = null;
+		try {
+			const r = await api.post<{ token: string }>(`/admin/users/${u.id}/password-reset`);
+			resetFor = { name: u.display_name, link: `${instance.baseUrl}/reset/${r.token}` };
+			resetCopied = false;
+		} catch (err) {
+			error = errorText(err);
+		}
+	}
+	async function copyReset() {
+		if (!resetFor) return;
+		await navigator.clipboard.writeText(resetFor.link);
+		resetCopied = true;
+	}
+
+	async function toggleAdmin(u: User) {
+		const text = u.is_admin ? m.revoke_admin_confirm({ name: u.display_name }) : m.make_admin_confirm({ name: u.display_name });
+		if (!confirm(text)) return;
+		error = null;
+		try {
+			await api.patch(`/admin/users/${u.id}`, { is_admin: !u.is_admin });
+			await load();
+			if (u.id === auth.user?.id) auth.set(await api.get<User>('/me'));
+		} catch (err) {
+			error = errorText(err);
+		}
 	}
 
 	async function resetTotp(u: User) {
@@ -186,7 +219,18 @@
 							</button>
 						{/if}
 					{/if}
+					<button
+						class="btn-ghost p-1.5 {u.is_admin ? 'text-brand-600' : ''}"
+						aria-label={u.is_admin ? m.revoke_admin() : m.make_admin()}
+						title={u.is_admin ? m.revoke_admin() : m.make_admin()}
+						onclick={() => toggleAdmin(u)}
+					>
+						<Crown class="size-4" />
+					</button>
 					{#if u.id !== auth.user?.id}
+						<button class="btn-ghost p-1.5" aria-label={m.password_link()} title={m.password_link()} onclick={() => passwordLink(u)}>
+							<KeyRound class="size-4" />
+						</button>
 						<button class="btn-danger p-1.5" aria-label={m.delete()} onclick={() => removeUser(u)}>
 							<Trash2 class="size-4" />
 						</button>
@@ -194,5 +238,19 @@
 				</li>
 			{/each}
 		</ul>
+		{#if resetFor}
+			<div class="mt-3 rounded-2xl bg-brand-50 p-4 dark:bg-brand-900/30">
+				<p class="mb-1 text-sm font-medium">{m.password_link_for({ name: resetFor.name })}</p>
+				<p class="mb-2 text-xs muted">{m.password_link_hint()}</p>
+				<div class="flex gap-2">
+					<input class="input font-mono text-xs" readonly value={resetFor.link} onfocus={(e) => e.currentTarget.select()} />
+					<button class="btn-secondary shrink-0" onclick={copyReset}>
+						{#if resetCopied}<Check class="size-4" />{m.copied()}{:else}<Copy class="size-4" />{m.copy()}{/if}
+					</button>
+				</div>
+			</div>
+		{/if}
 	</section>
+
+	<InstanceBackup />
 </div>

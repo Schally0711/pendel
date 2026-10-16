@@ -20,6 +20,13 @@ die werden aber sofort verworfen; gespeichert wird nur „Region X betreten/verl
 Jede Person sieht nur ihre eigenen Daten. Admins können Personen einladen und löschen, aber keine Zeiten anderer
 einsehen. Beim Löschen einer Person werden alle ihre Daten gelöscht.
 
+**Auskunft und Löschung:** Unter *Konto → Deine Daten* kann jede Person alles, was Pendel über sie speichert, als
+JSON herunterladen (ohne Passwort-Hash und Tokens) und ihr Konto selbst löschen. Ausnahme: Der letzte Admin kann sich
+nicht löschen, solange es noch andere Konten gibt – vorher eine andere Person zum Admin machen.
+
+Die **Instanz-Sicherung** in der Verwaltung enthält dagegen die komplette Datenbank aller Personen, inklusive
+Passwort-Hashes und Token-Hashes. Nur Admins können sie herunterladen.
+
 > Wer Pendel für andere betreibt (Familie, Freunde, Team), verarbeitet deren personenbezogene Daten. Je nach
 > Situation gelten dafür die Regeln der DSGVO – das ist Sache der Person, die die Instanz betreibt.
 
@@ -38,6 +45,8 @@ einsehen. Beim Löschen einer Person werden alle ihre Daten gelöscht.
   abmelden. Eine Passwortänderung und das Einschalten der Zwei-Faktor-Anmeldung melden alle anderen Geräte ab.
 - **Erste Einrichtung** nur mit dem Einrichtungscode aus dem Server-Log, damit niemand eine frische Instanz übernimmt.
 - **Keine offene Registrierung:** neue Konten nur über Einladungslinks (einmalig, befristet).
+- **Passwort vergessen:** Ein Admin erzeugt einen Link zum Zurücksetzen (24 Stunden, einmalig). Danach ist die Person
+  überall abgemeldet; eine eingerichtete Zwei-Faktor-Anmeldung bleibt bestehen.
 - **API-Tokens** gelten für Integrationen; sie umgehen die Zwei-Faktor-Anmeldung. Gib sie nur Geräten und
   Diensten, denen du vertraust, und widerrufe sie, wenn du sie nicht mehr brauchst.
 

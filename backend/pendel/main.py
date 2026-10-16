@@ -7,7 +7,7 @@ from fastapi import APIRouter, FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from . import __version__, setup
+from . import __version__, restore, setup
 from .api import router as api_router
 from .config import get_settings
 from .db import any_users, migrate
@@ -16,13 +16,14 @@ api = APIRouter(prefix="/api")
 
 UNSAFE_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
 # Files that must be revalidated on every load so new deployments are picked up
-NO_CACHE = {"index.html", "service-worker.js", "manifest.webmanifest"}
+NO_CACHE = {"index.html", "service-worker.js", "manifest.webmanifest", "theme.js"}
 
 mimetypes.add_type("application/manifest+json", ".webmanifest")
 CSRF_HEADER = "x-requested-with"
 # Credential exchange without a cookie session: nothing a forged cross-site request could abuse
 CSRF_EXEMPT = {"/api/auth/token"}
-MAX_BODY_BYTES = 1024 * 1024  # all API payloads are small JSON documents
+MAX_BODY_BYTES = 1024 * 1024  # all API payloads are small JSON documents …
+UPLOAD_PATHS = {"/api/admin/restore", "/api/setup/restore"}  # … except database uploads (own limit)
 
 
 @api.get("/health")
@@ -70,7 +71,8 @@ def create_app() -> FastAPI:
     async def body_limit(request: Request, call_next):
         """Reject oversized request bodies early (declared Content-Length)."""
         length = request.headers.get("content-length")
-        if length and (not length.isdigit() or int(length) > MAX_BODY_BYTES):
+        limit = restore.MAX_UPLOAD_BYTES if request.url.path in UPLOAD_PATHS else MAX_BODY_BYTES
+        if length and (not length.isdigit() or int(length) > limit):
             return JSONResponse({"detail": "request_too_large"}, status_code=413)
         return await call_next(request)
 

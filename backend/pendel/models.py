@@ -298,6 +298,20 @@ class LoginSession(Base):
     last_seen_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
 
 
+class PasswordReset(Base):
+    """One-time link created by an admin for someone who forgot their password (no e-mail needed)."""
+
+    __tablename__ = "password_resets"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True)
+    created_by_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+    expires_at: Mapped[datetime] = mapped_column(UTCDateTime)
+    used_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
+
+
 class RecoveryCode(Base):
     """One-time recovery code for two-factor authentication (only the hash is stored)."""
 
