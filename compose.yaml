@@ -1,0 +1,21 @@
+# Pendel with Docker Compose: `docker compose up -d`, then open http://<host>:8000
+# Updates: `docker compose pull && docker compose up -d` (data stays in ./data; the database is
+# migrated automatically, with a backup in ./data/backups before every schema change).
+services:
+  pendel:
+    image: ghcr.io/schally0711/pendel:0.9
+    container_name: pendel
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/data
+    environment:
+      TZ: Europe/Berlin
+      # External address for invitation, calendar and integration links:
+      # PENDEL_PUBLIC_URL: https://pendel.example.com
+      # Address(es) of your reverse proxy / tunnel, so Pendel sees real client IPs and HTTPS:
+      # PENDEL_FORWARDED_ALLOW_IPS: 172.18.0.0/16
+      # Owner of ./data (default 1000:1000):
+      # PUID: "1000"
+      # PGID: "1000"

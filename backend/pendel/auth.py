@@ -126,6 +126,11 @@ def login(db: Session, request: Request, email: str, password: str, code: str | 
     return user
 
 
+def _secure_cookie(request: Request) -> bool:
+    configured = get_settings().secure_cookies
+    return request.url.scheme == "https" if configured is None else configured
+
+
 def start_session(db: Session, user: User, request: Request, response: Response) -> None:
     token, token_hash = new_token()
     expires = utcnow() + SESSION_LIFETIME
@@ -144,7 +149,7 @@ def start_session(db: Session, user: User, request: Request, response: Response)
         max_age=int(SESSION_LIFETIME.total_seconds()),
         httponly=True,
         samesite="lax",
-        secure=get_settings().secure_cookies,
+        secure=_secure_cookie(request),
         path="/",
     )
 

@@ -13,8 +13,8 @@ if [ ! -f /etc/pendel/pendel.env ]; then
 	cat > /etc/pendel/pendel.env <<'ENV'
 PENDEL_DATA_DIR=/var/lib/pendel
 PENDEL_STATIC_DIR=/opt/pendel/static
-# Keep true behind an HTTPS reverse proxy
-PENDEL_SECURE_COOKIES=true
+# Secure session cookie: automatic (HTTPS requests) unless set; true behind an HTTPS proxy
+#PENDEL_SECURE_COOKIES=true
 # Addresses of trusted reverse proxies / cloudflared (for real client IPs), comma separated
 PENDEL_FORWARDED_ALLOW_IPS=127.0.0.1
 # Optional default for the public address; can also be set in the UI (Admin → Instance)

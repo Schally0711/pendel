@@ -149,3 +149,18 @@ def test_oversized_body_rejected(admin):
         "/api/adjustments", content=b"x" * (1024 * 1024 + 1), headers={"Content-Type": "application/json"}
     )
     assert (r.status_code, r.json()["detail"]) == (413, "request_too_large")
+
+
+def test_secure_cookie_follows_scheme(client, monkeypatch):
+    from pendel.config import get_settings
+    from pendel.setup import setup_code
+
+    monkeypatch.delenv("PENDEL_SECURE_COOKIES")
+    get_settings.cache_clear()
+    body = {"email": "a@example.org", "password": PASSWORD, "display_name": "A", "setup_code": setup_code()}
+    r = client.post("/api/setup", json=body)
+    assert "secure" not in r.headers["set-cookie"].lower()  # plain http (e.g. http://192.168.x.x:8000)
+    https = TestClient(client.app, base_url="https://pendel.test", headers={"X-Requested-With": "pendel"})
+    r = https.post("/api/auth/login", json={"email": "a@example.org", "password": PASSWORD})
+    assert "secure" in r.headers["set-cookie"].lower()
+    get_settings.cache_clear()
