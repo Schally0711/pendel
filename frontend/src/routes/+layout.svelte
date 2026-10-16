@@ -6,7 +6,7 @@
 	import { api } from '#lib/api.js';
 	import { auth } from '#lib/session.svelte.js';
 	import favicon from '#lib/assets/favicon.svg';
-	import { Clock, CalendarDays, Palmtree, Settings, Users, LogOut } from '@lucide/svelte';
+	import { Clock, CalendarDays, ChartColumn, Palmtree, Settings, Users, LogOut } from '@lucide/svelte';
 	import './layout.css';
 	import type { LayoutProps } from './$types';
 
@@ -36,8 +36,9 @@
 		{ href: '/', label: m.nav_today(), icon: Clock },
 		{ href: '/history', label: m.nav_history(), icon: CalendarDays },
 		{ href: '/absences', label: m.nav_absences(), icon: Palmtree },
+		{ href: '/stats', label: m.nav_stats(), icon: ChartColumn },
 		{ href: '/settings', label: m.nav_settings(), icon: Settings },
-		...(auth.user?.is_admin ? [{ href: '/admin', label: m.nav_admin(), icon: Users }] : [])
+		...(auth.user?.is_admin ? [{ href: '/admin', label: m.nav_admin(), icon: Users, desktopOnly: true }] : [])
 	]);
 
 	function active(href: string) {
@@ -60,9 +61,9 @@
 {:else if isPublic || !auth.user}
 	{@render children()}
 {:else}
-	<div class="min-h-dvh pb-24 md:pb-0">
+	<div class="min-h-dvh pb-24 md:pb-0 print:pb-0">
 		<header
-			class="sticky top-0 z-20 border-b border-slate-200/70 bg-slate-100/80 backdrop-blur dark:border-slate-800 dark:bg-slate-950/80"
+			class="sticky top-0 z-20 print:hidden border-b border-slate-200/70 bg-slate-100/80 backdrop-blur dark:border-slate-800 dark:bg-slate-950/80"
 		>
 			<div class="mx-auto flex max-w-5xl items-center gap-6 px-4 py-3">
 				<a href="/" class="flex items-center gap-2 text-lg font-semibold tracking-tight">
@@ -87,15 +88,15 @@
 			</div>
 		</header>
 
-		<main class="mx-auto max-w-5xl px-4 py-6">
+		<main class="mx-auto max-w-5xl px-4 py-6 print:max-w-none print:p-0">
 			{@render children()}
 		</main>
 
 		<nav
-			class="fixed inset-x-0 bottom-0 z-20 border-t border-slate-200 bg-white/90 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden dark:border-slate-800 dark:bg-slate-900/90"
+			class="fixed inset-x-0 bottom-0 z-20 print:hidden border-t border-slate-200 bg-white/90 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden dark:border-slate-800 dark:bg-slate-900/90"
 		>
 			<div class="mx-auto flex max-w-md justify-around">
-				{#each nav as item (item.href)}
+				{#each nav.filter((i) => !('desktopOnly' in i)) as item (item.href)}
 					<a
 						href={item.href}
 						class="flex flex-1 flex-col items-center gap-1 py-2.5 text-[11px] font-medium {active(item.href)

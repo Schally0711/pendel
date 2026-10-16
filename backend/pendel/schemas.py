@@ -397,6 +397,7 @@ class TokenLogin(Credentials):
 class TokenOut(Out):
     id: int
     name: str
+    scope: str = "full"
     created_at: datetime
     last_used_at: datetime | None
     revoked_at: datetime | None
@@ -404,3 +405,98 @@ class TokenOut(Out):
 
 class TokenCreated(TokenOut):
     token: str  # shown only once
+
+
+# --- statistics / export ---
+
+
+class DayStatOut(BaseModel):
+    day: date
+    target: int
+    actual: int
+    diff: int
+    balance: int
+    place: str | None
+    entry: DayKind | None
+    holiday: str | None
+    start: int | None
+    end: int | None
+    breaks: int
+    commute_to: int
+    commute_from: int
+    warnings: int
+
+
+class PeriodStatOut(BaseModel):
+    key: str
+    start: date
+    end: date
+    target: int
+    actual: int
+    diff: int
+    office_days: int
+    home_days: int
+    absence_days: int
+
+
+class SummaryOut(BaseModel):
+    worked_days: int
+    target: int
+    actual: int
+    diff: int
+    balance_start: int
+    balance_end: int
+    avg_actual: float
+    office_days: int
+    home_days: int
+    other_days: int
+    absence_days: dict[str, int]
+    avg_start: float | None
+    avg_end: float | None
+    earliest_start: int | None
+    latest_end: int | None
+    avg_commute_to: float | None
+    avg_commute_from: float | None
+    commute_by_weekday: list[float | None]
+    longest_day: date | None
+    longest_minutes: int
+    overtime_days: int
+    warning_days: int
+
+
+class StatsOut(BaseModel):
+    start: date
+    end: date
+    group: str  # week | month
+    days: list[DayStatOut]
+    periods: list[PeriodStatOut]
+    summary: SummaryOut
+
+
+class TaxOfficeOut(BaseModel):
+    place: str
+    distance_km: float | None
+    days: int
+    amount: float
+
+
+class TaxOut(BaseModel):
+    year: int
+    until: date
+    offices: list[TaxOfficeOut]
+    office_days: int
+    commuter_total: float
+    commuter_rate: tuple[float, float]
+    home_office_days: int
+    home_office_days_counted: int
+    home_office_rate: float
+    home_office_max_days: int
+    home_office_total: float
+    missing_distance: bool
+
+
+class CalendarStatus(BaseModel):
+    active: bool
+    created_at: datetime | None = None
+    last_used_at: datetime | None = None
+    url_path: str | None = None  # only right after creation

@@ -7,7 +7,7 @@
 	import type { Day, Place, Report } from '#lib/types.js';
 	import { DAY_BADGE, dayKindLabel } from '#lib/labels.js';
 	import DayEditor from '#lib/components/DayEditor.svelte';
-	import { ChevronLeft, ChevronRight, TriangleAlert } from '@lucide/svelte';
+	import { ChevronLeft, ChevronRight, Download, FileText, TriangleAlert } from '@lucide/svelte';
 
 	const todayStr = localDate(new Date(), auth.tz);
 	let month = $state(todayStr.slice(0, 7));
@@ -58,6 +58,12 @@
 	</div>
 
 	{#if report}
+		<div class="flex flex-wrap justify-end gap-2">
+			<a class="btn-secondary py-1.5" href="/report/{month}"><FileText class="size-4" />{m.monthly_report()}</a>
+			<a class="btn-ghost py-1.5" href="/api/export.csv?from={monthRange(month).from}&to={monthRange(month).to}" download data-sveltekit-reload>
+				<Download class="size-4" />{m.export_csv()}
+			</a>
+		</div>
 		<div class="grid grid-cols-2 gap-4 md:grid-cols-4">
 			<div class="card p-4">
 				<div class="text-xs font-medium muted">{m.target()}</div>

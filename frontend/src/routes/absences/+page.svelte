@@ -10,6 +10,7 @@
 	import Alert from '#lib/components/Alert.svelte';
 	import YearCalendar from '#lib/components/YearCalendar.svelte';
 	import DayEditor from '#lib/components/DayEditor.svelte';
+	import CalendarSubscription from '#lib/components/CalendarSubscription.svelte';
 	import { ChevronLeft, ChevronRight, Palmtree, Pencil, Plus, Trash2 } from '@lucide/svelte';
 
 	const today = localDate(new Date(), auth.tz);
@@ -293,6 +294,8 @@
 		<h2 class="section-title">{m.year_overview()}</h2>
 		<YearCalendar {year} {days} {today} onpick={(d) => (editing = d)} />
 	</section>
+
+	<CalendarSubscription />
 
 	<section class="card">
 		{#if periods.length === 0}

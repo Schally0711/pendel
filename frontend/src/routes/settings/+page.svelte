@@ -9,7 +9,7 @@
 	import type { Adjustment, Place, PlaceKind, Subdivision, User, WorkModel } from '#lib/types.js';
 	import Alert from '#lib/components/Alert.svelte';
 	import Integrations from '#lib/components/Integrations.svelte';
-	import { Plus, Trash2 } from '@lucide/svelte';
+	import { Plus, Trash2, Users } from '@lucide/svelte';
 
 	type Status = { message: string | null; tone: 'error' | 'success' };
 	const status = $state<Record<string, Status>>({});
@@ -169,7 +169,12 @@
 {/snippet}
 
 <div class="space-y-6">
-	<h1 class="text-2xl font-semibold tracking-tight">{m.settings_title()}</h1>
+	<div class="flex items-center justify-between gap-3">
+		<h1 class="text-2xl font-semibold tracking-tight">{m.settings_title()}</h1>
+		{#if auth.user?.is_admin}
+			<a href="/admin" class="btn-secondary md:hidden"><Users class="size-4" />{m.nav_admin()}</a>
+		{/if}
+	</div>
 
 	<!-- Profile -->
 	<form class="card space-y-4" onsubmit={saveProfile}>

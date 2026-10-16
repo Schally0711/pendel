@@ -11,9 +11,36 @@
 	--color-brand-600: oklch(0.54 0.105 182);
 	--color-brand-700: oklch(0.46 0.09 182);
 	--color-brand-900: oklch(0.3 0.06 182);
-	--color-home: oklch(0.65 0.15 300);
-	--color-office: oklch(0.6 0.13 250);
-	--color-travel: oklch(0.72 0.14 70);
+}
+
+/* Place colours, validated for colour-vision deficiency (dataviz validator, adjacent pairs) on light and dark
+   surfaces. Order office, home, absence, travel. Dark mode uses its own steps, not an automatic flip. */
+:root {
+	--c-office: #2a78d6;
+	--c-home: #eb6834;
+	--c-absence: #1baf7a;
+	--c-travel: #eda100;
+	--c-grid: #e2e8f0;
+	--c-axis: #cbd5e1;
+	--c-line: oklch(0.54 0.105 182);
+}
+@media (prefers-color-scheme: dark) {
+	:root {
+		--c-office: #3987e5;
+		--c-home: #d95926;
+		--c-absence: #199e70;
+		--c-travel: #c98500;
+		--c-grid: #1e293b;
+		--c-axis: #334155;
+		--c-line: oklch(0.72 0.12 182);
+	}
+}
+
+@theme inline {
+	--color-home: var(--c-home);
+	--color-office: var(--c-office);
+	--color-travel: var(--c-travel);
+	--color-absence: var(--c-absence);
 }
 
 html {
@@ -23,6 +50,7 @@ html {
 
 body {
 	@apply bg-slate-100 text-slate-900 antialiased dark:bg-slate-950 dark:text-slate-100;
+	print-color-adjust: exact;
 	font-feature-settings: 'tnum' 1, 'cv11' 1;
 }
 

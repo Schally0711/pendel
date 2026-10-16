@@ -11,7 +11,10 @@ Self-hosted work time tracking for people who split their week between **home of
 - Flexitime balance (overtime / undertime)
 - Time off: vacation ranges (weekends/holidays skipped), yearly vacation account with carry-over, sick days, child sick days, flex days, release, training, parental/unpaid leave
 - Commute tracking: automatic via Home Assistant zones, Android (Tasker, OwnTracks) or any webhook
-- Statistics and charts, CSV/PDF export, tax overview (commuter allowance, home office allowance)
+- Statistics: flexitime balance over time, hours per week/month vs. target, office/home share, working hours window,
+  commute by weekday; printable monthly time sheet (PDF via the browser) and CSV export
+- Tax overview per year (German commuter allowance and home office allowance)
+- iCal subscription for time off and public holidays
 - German and English UI
 - Single container with SQLite – easy to host
 

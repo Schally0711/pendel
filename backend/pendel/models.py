@@ -259,6 +259,8 @@ class ApiToken(Base):
     created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
     last_used_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
     revoked_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
+    # "full" = API access; "calendar" = only the iCal feed (token sits in the feed URL)
+    scope: Mapped[str] = mapped_column(String(20), default="full", server_default="full")
 
 
 class LoginSession(Base):

@@ -113,7 +113,7 @@ def _token_from_header(db: Session, request: Request) -> ApiToken | None:
     if scheme.lower() != "bearer" or not token:
         return None
     api_token = db.scalar(select(ApiToken).where(ApiToken.token_hash == hash_token(token.strip())))
-    if api_token is None or api_token.revoked_at is not None:
+    if api_token is None or api_token.revoked_at is not None or api_token.scope != "full":
         return None
     api_token.last_used_at = utcnow()
     db.commit()
