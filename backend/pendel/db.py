@@ -1,3 +1,5 @@
+import logging
+import sqlite3
 from collections.abc import Iterator
 from contextlib import contextmanager
 from functools import lru_cache
@@ -69,13 +71,58 @@ def migration_connection(engine: Engine) -> Iterator[Connection]:
                 conn.commit()
 
 
+def any_users() -> bool:
+    with get_engine().connect() as conn:
+        return conn.exec_driver_sql("SELECT 1 FROM users LIMIT 1").first() is not None
+
+
+BACKUPS_KEPT = 5
+
+
 def migrate() -> None:
-    """Bring the database schema up to date (runs on application startup)."""
+    """Bring the database schema up to date (runs on application startup).
+
+    Before an existing database is changed, a consistent copy is written to
+    `<data_dir>/backups/pendel-before-<version>-<timestamp>.db` (the last BACKUPS_KEPT are kept).
+    """
     from alembic import command
     from alembic.config import Config
+    from alembic.runtime.migration import MigrationContext
+    from alembic.script import ScriptDirectory
 
     cfg = Config()
     cfg.set_main_option("script_location", str(Path(__file__).parent / "migrations"))
-    with migration_connection(get_engine()) as conn:
+    engine = get_engine()
+    head = ScriptDirectory.from_config(cfg).get_current_head()
+    with engine.connect() as conn:
+        current = MigrationContext.configure(conn).get_current_revision()
+    if current is not None and current != head:
+        backup_before_migration(engine)
+    with migration_connection(engine) as conn:
         cfg.attributes["connection"] = conn
         command.upgrade(cfg, "head")
+
+
+def backup_before_migration(engine: Engine) -> Path | None:
+    """Copy the SQLite database with the backup API (a plain file copy would miss the WAL)."""
+    if engine.dialect.name != "sqlite" or not engine.url.database:
+        return None
+    from datetime import UTC, datetime
+
+    from . import __version__
+
+    folder = Path(engine.url.database).resolve().parent / "backups"
+    folder.mkdir(parents=True, exist_ok=True)
+    stamp = datetime.now(UTC).strftime("%Y%m%d-%H%M%S")
+    target = folder / f"pendel-before-{__version__}-{stamp}.db"
+    source = sqlite3.connect(engine.url.database)
+    dest = sqlite3.connect(target)
+    try:
+        source.backup(dest)
+    finally:
+        dest.close()
+        source.close()
+    for old in sorted(folder.glob("pendel-before-*.db"), key=lambda f: f.stat().st_mtime)[:-BACKUPS_KEPT]:
+        old.unlink()
+    logging.getLogger("uvicorn.error").warning("Database backup before migration: %s", target)
+    return target

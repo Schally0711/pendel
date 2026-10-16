@@ -1,11 +1,17 @@
 from fastapi.testclient import TestClient
 
+from pendel.setup import setup_code
+
 from .conftest import PASSWORD
 
 
 def test_setup_only_once(client):
     assert client.get("/api/setup").json() == {"needed": True}
     body = {"email": "a@example.org", "password": PASSWORD, "display_name": "A"}
+    # the first account needs the one-time code from the server log
+    assert client.post("/api/setup", json=body).status_code == 403
+    assert client.post("/api/setup", json=body | {"setup_code": "AAAA-BBBB-CCCC"}).status_code == 403
+    body["setup_code"] = setup_code().lower()  # case does not matter
     assert client.post("/api/setup", json=body).status_code == 201
     assert client.get("/api/setup").json() == {"needed": False}
     assert client.post("/api/setup", json=body | {"email": "b@example.org"}).status_code == 409
@@ -101,3 +107,17 @@ def test_instance_public_url(admin, monkeypatch):
     created = admin.post("/api/calendar/token").json()
     assert created["public_url"] == "https://env.example.org"
     get_settings.cache_clear()
+
+
+def test_setup_code_from_settings(tmp_path, monkeypatch):
+    monkeypatch.setenv("PENDEL_SETUP_TOKEN", "my-install-token")
+    from pendel import setup
+    from pendel.config import get_settings
+
+    get_settings.cache_clear()
+    setup.reset()
+    try:
+        assert setup.check_setup_code("MY-INSTALL-TOKEN") and not setup.check_setup_code("")
+    finally:
+        get_settings.cache_clear()
+        setup.reset()

@@ -27,6 +27,14 @@ class Credentials(BaseModel):
     totp: str | None = Field(default=None, max_length=32)  # authenticator or recovery code, if 2FA is on
 
 
+class SetupIn(BaseModel):
+    email: str = Field(min_length=3, max_length=255, pattern=r"^[^@\s]+@[^@\s]+$")
+    password: str = Field(min_length=MIN_PASSWORD_LENGTH, max_length=1024)
+    display_name: str = Field(min_length=1, max_length=100)
+    locale: str = Field(default="de", pattern=r"^(de|en)$")
+    setup_code: str = Field(default="", max_length=64)
+
+
 class Registration(BaseModel):
     email: str = Field(min_length=3, max_length=255, pattern=r"^[^@\s]+@[^@\s]+$")
     password: str = Field(min_length=MIN_PASSWORD_LENGTH, max_length=1024)

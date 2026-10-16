@@ -7,10 +7,10 @@ from fastapi import APIRouter, FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from . import __version__
+from . import __version__, setup
 from .api import router as api_router
 from .config import get_settings
-from .db import migrate
+from .db import any_users, migrate
 
 api = APIRouter(prefix="/api")
 
@@ -22,6 +22,7 @@ mimetypes.add_type("application/manifest+json", ".webmanifest")
 CSRF_HEADER = "x-requested-with"
 # Credential exchange without a cookie session: nothing a forged cross-site request could abuse
 CSRF_EXEMPT = {"/api/auth/token"}
+MAX_BODY_BYTES = 1024 * 1024  # all API payloads are small JSON documents
 
 
 @api.get("/health")
@@ -32,6 +33,8 @@ def health() -> dict:
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     migrate()
+    if not any_users():
+        setup.announce()
     yield
 
 
@@ -61,6 +64,14 @@ def create_app() -> FastAPI:
             and request.headers.get(CSRF_HEADER) != "pendel"
         ):
             return JSONResponse({"detail": "csrf_header_missing"}, status_code=403)
+        return await call_next(request)
+
+    @app.middleware("http")
+    async def body_limit(request: Request, call_next):
+        """Reject oversized request bodies early (declared Content-Length)."""
+        length = request.headers.get("content-length")
+        if length and (not length.isdigit() or int(length) > MAX_BODY_BYTES):
+            return JSONResponse({"detail": "request_too_large"}, status_code=413)
         return await call_next(request)
 
     @app.middleware("http")

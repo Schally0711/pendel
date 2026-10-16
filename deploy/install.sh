@@ -44,6 +44,11 @@ for _ in $(seq 20); do
 	if python3 -c 'import sys, urllib.request; urllib.request.urlopen(sys.argv[1], timeout=2)' \
 		"http://127.0.0.1:${port:-8000}/api/health" 2>/dev/null; then
 		echo "Pendel $(cat VERSION) installed and running"
+		if python3 -c 'import json, sys, urllib.request; sys.exit(not json.load(urllib.request.urlopen(sys.argv[1]))["needed"])' \
+			"http://127.0.0.1:${port:-8000}/api/setup" 2>/dev/null; then
+			echo "First start: open Pendel in the browser and enter the setup code from the log:"
+			journalctl -u pendel --no-pager | grep -o 'setup code: .*' | tail -1
+		fi
 		exit 0
 	fi
 	sleep 1

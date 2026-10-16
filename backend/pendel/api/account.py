@@ -33,6 +33,7 @@ from ..schemas import (
     PasswordConfirm,
     RecoveryCodes,
     Registration,
+    SetupIn,
     SetupStatus,
     TotpEnable,
     TotpSetup,
@@ -40,6 +41,7 @@ from ..schemas import (
     UserOut,
     UserUpdate,
 )
+from ..setup import check_setup_code
 from ..users import create_user
 
 router = APIRouter(tags=["account"])
@@ -55,11 +57,15 @@ def setup_status(db: DB) -> SetupStatus:
 
 
 @router.post("/setup", status_code=status.HTTP_201_CREATED)
-def setup(data: Registration, request: Request, response: Response, db: DB) -> UserOut:
-    """Create the first (admin) account. Only possible while no user exists."""
+def setup(data: SetupIn, request: Request, response: Response, db: DB) -> UserOut:
+    """Create the first (admin) account. Only possible while no user exists, with the setup code
+    from the server log."""
     if not _no_users(db):
         raise HTTPException(status.HTTP_409_CONFLICT, "already_set_up")
-    user = create_user(db, data, is_admin=True)
+    login_limiter.check(client_key(request))
+    if not check_setup_code(data.setup_code):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "invalid_setup_code")
+    user = create_user(db, Registration(**data.model_dump(exclude={"setup_code"})), is_admin=True)
     start_session(db, user, request, response)
     return UserOut.model_validate(user)
 

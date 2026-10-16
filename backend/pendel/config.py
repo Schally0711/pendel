@@ -17,6 +17,9 @@ class Settings(BaseSettings):
     secure_cookies: bool = True
     # Default for the public address (e.g. a Cloudflare tunnel); admins can override it in the UI.
     public_url: str | None = None
+    # One-time code for creating the first (admin) account. Random and printed to the log on
+    # startup while no user exists, unless set here (e.g. for automated installs).
+    setup_token: str | None = None
 
     @property
     def effective_database_url(self) -> str:

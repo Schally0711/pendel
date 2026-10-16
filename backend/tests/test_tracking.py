@@ -136,3 +136,57 @@ def test_today_balance_includes_adjustments_booked_today(admin):
     after = admin.get("/api/today").json()
     assert after["balance"] == today["balance"] + 420
     assert after["balance_before_today"] == today["balance_before_today"] + 420
+
+
+def test_isolation_of_every_object_type(admin):
+    """A second user gets 404 for every object of the first one, and sees none of them in lists."""
+    s = admin.post("/api/sessions", json={"kind": "home", "start": iso(ago(90)), "end": iso(ago(30))}).json()
+    brk = admin.post(
+        f"/api/sessions/{s['id']}/breaks", json={"start": iso(ago(60)), "end": iso(ago(50))}
+    ).json()
+    commute = admin.post(
+        "/api/commutes", json={"direction": "to_work", "start": iso(ago(120)), "end": iso(ago(95))}
+    ).json()
+    adj = admin.post("/api/adjustments", json={"day": "2026-10-01", "minutes": 30}).json()
+    tok = admin.post("/api/tokens", json={"name": "x"}).json()
+    place = admin.get("/api/places").json()[0]
+    model = admin.get("/api/work-models").json()[0]
+    emp = admin.get("/api/employments").json()[0]
+    login = admin.get("/api/me/sessions").json()[0]
+
+    invite = admin.post("/api/admin/invitations", json={}).json()["token"]
+    other = TestClient(admin.app, headers={"X-Requested-With": "pendel"})
+    body = {"email": "o@example.org", "password": PASSWORD, "display_name": "O"}
+    assert other.post(f"/api/invitations/{invite}/accept", json=body).status_code == 201
+
+    attempts = [
+        other.patch(f"/api/sessions/{s['id']}", json={"note": "x"}),
+        other.post(f"/api/sessions/{s['id']}/breaks", json={"start": iso(ago(40))}),
+        other.put(f"/api/breaks/{brk['id']}", json={"start": iso(ago(60)), "end": iso(ago(55))}),
+        other.delete(f"/api/breaks/{brk['id']}"),
+        other.put(f"/api/commutes/{commute['id']}", json={"direction": "to_work", "start": iso(ago(120))}),
+        other.delete(f"/api/commutes/{commute['id']}"),
+        other.put(f"/api/adjustments/{adj['id']}", json={"day": "2026-10-01", "minutes": 1}),
+        other.delete(f"/api/adjustments/{adj['id']}"),
+        other.delete(f"/api/tokens/{tok['id']}"),
+        other.put(f"/api/places/{place['id']}", json={"name": "x", "kind": "home"}),
+        other.delete(f"/api/places/{place['id']}"),
+        other.put(f"/api/work-models/{model['id']}", json=model),
+        other.delete(f"/api/work-models/{model['id']}"),
+        other.put(f"/api/employments/{emp['id']}", json={"start": emp["start"]}),
+        other.delete(f"/api/employments/{emp['id']}"),
+        other.delete(f"/api/me/sessions/{login['id']}"),
+        other.get("/api/admin/users"),
+    ]
+    assert [r.status_code for r in attempts] == [404] * 16 + [403]
+
+    day = ago(0).date()
+    rng = {"from": str(day - timedelta(days=2)), "to": str(day + timedelta(days=1))}
+    assert other.get("/api/sessions", params=rng).json() == []
+    assert other.get("/api/commutes", params=rng).json() == []
+    assert other.get("/api/adjustments").json() == []
+    assert [t["name"] for t in other.get("/api/tokens").json()] == []
+    assert {p["id"] for p in other.get("/api/places").json()}.isdisjoint({place["id"]})
+    assert len(other.get("/api/me/sessions").json()) == 1
+    # and the first user's data is untouched
+    assert len(admin.get("/api/sessions", params=rng).json()[0]["breaks"]) == 1

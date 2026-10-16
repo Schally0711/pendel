@@ -142,3 +142,10 @@ def test_security_headers(client):
     assert r.headers["x-frame-options"] == "DENY"
     assert r.headers["x-content-type-options"] == "nosniff"
     assert r.headers["cache-control"] == "no-store"
+
+
+def test_oversized_body_rejected(admin):
+    r = admin.post(
+        "/api/adjustments", content=b"x" * (1024 * 1024 + 1), headers={"Content-Type": "application/json"}
+    )
+    assert (r.status_code, r.json()["detail"]) == (413, "request_too_large")

@@ -385,5 +385,8 @@
 	"action_stop": "Feierabend",
 	"session_running": "Du bist bereits eingestempelt.",
 	"no_session_running": "Du bist gerade nicht eingestempelt.",
-	"shortcut_done": "Erledigt: {action}"
+	"shortcut_done": "Erledigt: {action}",
+	"setup_code": "Einrichtungscode",
+	"setup_code_hint": "Steht beim Start im Server-Log, z. B. mit „docker logs pendel“ oder „journalctl -u pendel“. So kann niemand sonst deine neue Instanz übernehmen.",
+	"invalid_setup_code": "Der Einrichtungscode stimmt nicht. Du findest ihn im Server-Log."
 }

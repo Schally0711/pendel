@@ -385,5 +385,8 @@
 	"action_stop": "Finish work",
 	"session_running": "You are already clocked in.",
 	"no_session_running": "You are not clocked in right now.",
-	"shortcut_done": "Done: {action}"
+	"shortcut_done": "Done: {action}",
+	"setup_code": "Setup code",
+	"setup_code_hint": "Printed to the server log on startup, e.g. via “docker logs pendel” or “journalctl -u pendel”. This way nobody else can claim your new instance.",
+	"invalid_setup_code": "The setup code is wrong. You can find it in the server log."
 }
