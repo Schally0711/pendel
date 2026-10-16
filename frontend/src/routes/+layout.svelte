@@ -1,37 +1,109 @@
 <script lang="ts">
-	import { getLocale, setLocale, locales } from '#lib/paraglide/runtime.js';
+	import { page } from '$app/state';
+	import { goto } from '$app/navigation';
+	import { onMount } from 'svelte';
 	import { m } from '#lib/paraglide/messages.js';
-	import './layout.css';
+	import { api } from '#lib/api.js';
+	import { auth } from '#lib/session.svelte.js';
 	import favicon from '#lib/assets/favicon.svg';
+	import { Clock, CalendarDays, Settings, Users, LogOut } from '@lucide/svelte';
+	import './layout.css';
 	import type { LayoutProps } from './$types';
 
 	let { children }: LayoutProps = $props();
 
-	$effect(() => {
-		document.documentElement.lang = getLocale();
+	const PUBLIC = ['/login', '/setup', '/invite'];
+	const isPublic = $derived(PUBLIC.some((p) => page.url.pathname.startsWith(p)));
+	let ready = $state(false);
+
+	onMount(async () => {
+		const { needed } = await api.get<{ needed: boolean }>('/setup');
+		if (needed) {
+			ready = true;
+			return goto('/setup');
+		}
+		await auth.load();
+		ready = true;
 	});
+
+	$effect(() => {
+		if (ready && !auth.user && !isPublic) goto('/login');
+	});
+
+	const nav = $derived([
+		{ href: '/', label: m.nav_today(), icon: Clock },
+		{ href: '/history', label: m.nav_history(), icon: CalendarDays },
+		{ href: '/settings', label: m.nav_settings(), icon: Settings },
+		...(auth.user?.is_admin ? [{ href: '/admin', label: m.nav_admin(), icon: Users }] : [])
+	]);
+
+	function active(href: string) {
+		return href === '/' ? page.url.pathname === '/' : page.url.pathname.startsWith(href);
+	}
+
+	async function logout() {
+		await api.post('/auth/logout');
+		auth.set(null);
+		goto('/login');
+	}
 </script>
 
 <svelte:head>
 	<link rel="icon" href={favicon} />
 </svelte:head>
 
-<div class="min-h-dvh bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
-	<header class="border-b border-slate-200 dark:border-slate-800">
-		<div class="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
-			<span class="text-lg font-semibold tracking-tight text-brand-700 dark:text-brand-500">Pendel</span>
-			<nav class="flex gap-1 text-sm" aria-label={m.language()}>
-				{#each locales as locale (locale)}
-					<button
-						class="rounded px-2 py-1 uppercase hover:bg-slate-200 dark:hover:bg-slate-800"
-						class:font-bold={locale === getLocale()}
-						onclick={() => setLocale(locale)}>{locale}</button
+{#if !ready}
+	<div class="grid min-h-dvh place-items-center muted">{m.loading()}</div>
+{:else if isPublic || !auth.user}
+	{@render children()}
+{:else}
+	<div class="min-h-dvh pb-24 md:pb-0">
+		<header
+			class="sticky top-0 z-20 border-b border-slate-200/70 bg-slate-100/80 backdrop-blur dark:border-slate-800 dark:bg-slate-950/80"
+		>
+			<div class="mx-auto flex max-w-5xl items-center gap-6 px-4 py-3">
+				<a href="/" class="flex items-center gap-2 text-lg font-semibold tracking-tight">
+					<img src={favicon} alt="" class="size-7" />
+					Pendel
+				</a>
+				<nav class="hidden gap-1 md:flex">
+					{#each nav as item (item.href)}
+						<a
+							href={item.href}
+							class="rounded-lg px-3 py-1.5 text-sm font-medium transition {active(item.href)
+								? 'bg-white text-brand-700 shadow-sm dark:bg-slate-800 dark:text-brand-400'
+								: 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'}"
+							>{item.label}</a
+						>
+					{/each}
+				</nav>
+				<button class="btn-ghost ml-auto px-2.5" onclick={logout} title={m.logout()}>
+					<span class="hidden text-sm sm:inline">{auth.user.display_name}</span>
+					<LogOut class="size-4" />
+				</button>
+			</div>
+		</header>
+
+		<main class="mx-auto max-w-5xl px-4 py-6">
+			{@render children()}
+		</main>
+
+		<nav
+			class="fixed inset-x-0 bottom-0 z-20 border-t border-slate-200 bg-white/90 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden dark:border-slate-800 dark:bg-slate-900/90"
+		>
+			<div class="mx-auto flex max-w-md justify-around">
+				{#each nav as item (item.href)}
+					<a
+						href={item.href}
+						class="flex flex-1 flex-col items-center gap-1 py-2.5 text-[11px] font-medium {active(item.href)
+							? 'text-brand-600 dark:text-brand-400'
+							: 'text-slate-500'}"
 					>
+						<item.icon class="size-5" />
+						{item.label}
+					</a>
 				{/each}
-			</nav>
-		</div>
-	</header>
-	<main class="mx-auto max-w-5xl px-4 py-6">
-		{@render children()}
-	</main>
-</div>
+			</div>
+		</nav>
+	</div>
+{/if}

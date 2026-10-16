@@ -109,8 +109,16 @@ def evaluate_days(
     return results
 
 
+def local_today(user: User, now: datetime | None = None) -> date:
+    return (now or datetime.now(UTC)).astimezone(ZoneInfo(user.timezone)).date()
+
+
 def balance(db: Session, user: User, until: date, now: datetime | None = None) -> int:
-    """Flexitime balance in minutes at the end of `until`: adjustments plus (actual - target) per day."""
+    """Flexitime balance in minutes at the end of `until`: adjustments plus (actual - target) per day.
+
+    Days after today do not count yet (their target is not due).
+    """
+    until = min(until, local_today(user, now))
     adjustments = db.scalar(
         select(func.coalesce(func.sum(BalanceAdjustment.minutes), 0)).where(
             BalanceAdjustment.user_id == user.id, BalanceAdjustment.day <= until

@@ -3,7 +3,7 @@
 from fastapi import APIRouter
 
 from ..auth import DB, CurrentUser
-from ..reports import DayReport, balance, evaluate_days
+from ..reports import DayReport, balance, evaluate_days, local_today
 from ..schemas import DayOut, ReportOut
 from .common import FromDate, ToDate
 from .records import local_range
@@ -34,12 +34,13 @@ def day_out(d: DayReport) -> DayOut:
 def report(user: CurrentUser, db: DB, start: FromDate, end: ToDate) -> ReportOut:
     local_range(user, start, end)  # validates the range
     days = evaluate_days(db, user, start, end)
+    today = local_today(user)
     return ReportOut(
         start=start,
         end=end,
         days=[day_out(d) for d in days],
         target=sum(d.result.target for d in days),
         actual=sum(d.result.actual for d in days),
-        diff=sum(d.result.diff for d in days),
+        diff=sum(d.result.diff for d in days if d.result.day <= today),
         balance=balance(db, user, end),
     )

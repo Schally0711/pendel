@@ -10,6 +10,22 @@ Pendel is a self-hosted work time tracker (home office vs. office days, commute 
 - `frontend/` – SvelteKit (Svelte 5 runes) as a pure SPA (`adapter-static`, `ssr = false`), Tailwind CSS 4, i18n via Paraglide (`messages/de.json`, `messages/en.json`; German is the base locale, no locale in URLs). The dev server proxies `/api` to `127.0.0.1:8000`.
 - `Containerfile` – multi-stage build producing one image (frontend build copied into the Python image), data in `/data`.
 
+## Auth & API
+
+- First run: `POST /api/setup` creates the admin (only while no user exists). Further users only via admin invitation links (`/invite/<token>`); no open registration.
+- Browser auth = session cookie (`pendel_session`, token hashed in `login_sessions`). Automations use `Authorization: Bearer <api token>`.
+- CSRF guard (`main.py`): cookie-authenticated POST/PUT/PATCH/DELETE under `/api/` must send `X-Requested-With: pendel` (the frontend `api.ts` client does this; tests set it as default header).
+- Every user-owned row is loaded via `api/common.owned()` → 404 for other users' data.
+- `/api/today` and `/api/report` feed the UI; the balance ignores days after the user's local today.
+
+## Frontend structure
+
+- Imports use Node subpath imports `#lib/...` (SvelteKit 3; no `$lib`). TS modules need the `.js` suffix (`#lib/api.js`), components the `.svelte` suffix.
+- `lib/api.ts` (fetch wrapper, redirects to /login on 401), `lib/session.svelte.ts` (current user, rune state), `lib/time.ts` (all date math in the *user's* time zone: `zonedToIso`, `localDate`, `localTime`), `lib/types.ts` mirrors `schemas.py`.
+- Routes: `/` today (clock actions, live timer), `/history` month view + `DayEditor` modal, `/settings`, `/admin`, public `/login`, `/setup`, `/invite/[token]`. The root layout gates non-public routes.
+- Styling: Tailwind 4 with custom utilities (`card`, `btn-*`, `input`, `label`, `muted`) defined via `@utility` in `routes/layout.css` (Tailwind 4 cannot `@apply` classes from `@layer components`). Brand colors `brand-*`, place colors `home`/`office`/`travel`. Dark mode follows the OS.
+- Local cookies: run the backend with `PENDEL_SECURE_COOKIES=false` when testing over plain HTTP on a non-localhost address.
+
 ## Backend architecture
 
 - `models.py` – SQLAlchemy models. Timestamps are UTC (`dbtypes.UTCDateTime`, rejects naive datetimes); sessions and commutes belong to the *local* day (user time zone) on which they start. Running entries have `end = None`.

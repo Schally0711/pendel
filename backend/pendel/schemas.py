@@ -273,8 +273,8 @@ class ReportOut(BaseModel):
     days: list[DayOut]
     target: int
     actual: int
-    diff: int
-    balance: int  # flexitime balance at the end of the range
+    diff: int  # only days up to today
+    balance: int  # flexitime balance at the end of the range (at most today)
 
 
 class TodayOut(BaseModel):

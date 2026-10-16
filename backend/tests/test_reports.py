@@ -92,3 +92,9 @@ def test_work_model_change(db, user):
     db.commit()
     fri_before, fri_after = evaluate_range(db, user, date(2026, 10, 2), date(2026, 10, 9))[::7]
     assert (fri_before.target, fri_after.target) == (480, 0)
+
+
+def test_future_days_do_not_count(db, user):
+    now = datetime(2026, 10, 1, 10, 0, tzinfo=UTC)  # Thursday
+    # Mon 28 Sep - Wed 30 Sep empty: 3 x -480; Thursday (today) counts, Friday not yet
+    assert balance(db, user, date(2026, 10, 2), now) == -4 * 480
