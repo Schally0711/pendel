@@ -2,7 +2,7 @@
 
 Alle nennenswerten Änderungen pro Version. Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
-## [0.9.0] – Beta
+## [0.9.0] – 2026-10-16 (Beta)
 
 Erste öffentliche Version.
 

@@ -1,3 +1,3 @@
 """Pendel – work time tracking for home office and office days."""
 
-__version__ = "0.8.0"
+__version__ = "0.9.0"
