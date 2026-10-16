@@ -1,3 +1,5 @@
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import APIRouter, FastAPI
@@ -6,6 +8,7 @@ from fastapi.staticfiles import StaticFiles
 
 from . import __version__
 from .config import get_settings
+from .db import migrate
 
 api = APIRouter(prefix="/api")
 
@@ -15,8 +18,20 @@ def health() -> dict:
     return {"status": "ok", "version": __version__}
 
 
+@asynccontextmanager
+async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
+    migrate()
+    yield
+
+
 def create_app() -> FastAPI:
-    app = FastAPI(title="Pendel", version=__version__, docs_url="/api/docs", openapi_url="/api/openapi.json")
+    app = FastAPI(
+        title="Pendel",
+        version=__version__,
+        lifespan=lifespan,
+        docs_url="/api/docs",
+        openapi_url="/api/openapi.json",
+    )
     app.include_router(api)
     _mount_spa(app, get_settings().static_dir)
     return app

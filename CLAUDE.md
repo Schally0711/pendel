@@ -10,6 +10,15 @@ Pendel is a self-hosted work time tracker (home office vs. office days, commute 
 - `frontend/` – SvelteKit (Svelte 5 runes) as a pure SPA (`adapter-static`, `ssr = false`), Tailwind CSS 4, i18n via Paraglide (`messages/de.json`, `messages/en.json`; German is the base locale, no locale in URLs). The dev server proxies `/api` to `127.0.0.1:8000`.
 - `Containerfile` – multi-stage build producing one image (frontend build copied into the Python image), data in `/data`.
 
+## Backend architecture
+
+- `models.py` – SQLAlchemy models. Timestamps are UTC (`dbtypes.UTCDateTime`, rejects naive datetimes); sessions and commutes belong to the *local* day (user time zone) on which they start. Running entries have `end = None`.
+- `calc.py` – pure accounting rules on plain dataclasses, no DB: day target (holidays/vacation/sick are neutral, flex days keep the target), break handling (`manual` vs. `auto` = fixed daily break, longer recorded breaks win; breaks with `deducted = False` are recorded absences that count as work, e.g. customer visits; office gaps up to `office_gap_break_max_minutes` are breaks), ArbZG warnings, commute credit percentage.
+- `reports.py` – loads a user's data for a date range and feeds `calc.evaluate_day`; holidays via the `holidays` package (country + subdivision from the user). The flexitime balance is never stored: `balance()` = sum of `BalanceAdjustment` (opening balance, payouts) + daily diffs since the first `WorkModel`.
+- `WorkModel` rows are versioned by `valid_from`; the newest model not after a day applies to it, so contract changes keep past days correct.
+- `Event` stores raw automation events (zone enter/leave, …) for traceability; sessions/commutes are derived from them. `ApiToken` stores only token hashes.
+- Migrations live in `pendel/migrations` (shipped inside the package) and run automatically on startup (`db.migrate()`). After changing models: `PENDEL_DATA_DIR=/tmp/x .venv/bin/alembic upgrade head && PENDEL_DATA_DIR=/tmp/x .venv/bin/alembic revision --autogenerate -m "..."`, then review the generated file (`render_as_batch` is on for SQLite).
+
 ## Commands
 
 ```bash
