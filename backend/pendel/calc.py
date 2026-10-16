@@ -56,6 +56,7 @@ class DayResult:
     commute_credit: int
     actual: int  # credited work time
     warnings: list[str] = field(default_factory=list)
+    actual_seconds: int = 0  # unrounded credited work time, for live counters
 
     @property
     def diff(self) -> int:
@@ -127,4 +128,5 @@ def evaluate_day(
         commute_credit=round(commute_credit),
         actual=round(work + commute_credit),
         warnings=warnings,
+        actual_seconds=round((work + commute_credit) * 60),
     )

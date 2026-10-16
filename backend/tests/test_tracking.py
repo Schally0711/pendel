@@ -116,3 +116,14 @@ def test_work_model_rules(admin):
     assert dup.status_code == 409
     new = admin.post("/api/work-models", json={"valid_from": "2030-01-01", "break_mode": "auto"})
     assert new.status_code == 201
+
+
+def test_today_actual_seconds_survive_restart(admin):
+    """Short sessions must not be rounded away when work is stopped and restarted."""
+    now = datetime.now(UTC)
+    admin.post("/api/clock/start", json={"kind": "home", "at": iso(now - timedelta(seconds=100))})
+    admin.post("/api/clock/stop", json={"at": iso(now - timedelta(seconds=60))})
+    admin.post("/api/clock/start", json={"kind": "home"})
+    today = admin.get("/api/today").json()
+    assert 40 <= today["actual_seconds"] <= 45
+    assert today["day"]["actual"] == 1

@@ -54,6 +54,7 @@ def today(user: CurrentUser, db: DB) -> TodayOut:
     return TodayOut(
         now=now,
         day=day_out(week[-1]),
+        actual_seconds=week[-1].result.actual_seconds,
         running_session=SessionOut.model_validate(session) if session else None,
         running_break=BreakOut.model_validate(brk) if brk else None,
         running_commute=CommuteOut.model_validate(commute) if commute else None,

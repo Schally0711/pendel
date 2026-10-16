@@ -5,7 +5,7 @@
 	import { auth } from '#lib/session.svelte.js';
 	import { dayKindLabel } from '#lib/labels.js';
 	import { addDays, formatDate, hm, localDate, signedHm } from '#lib/time.js';
-	import type { DayKind, Stats, TaxOverview } from '#lib/types.js';
+	import type { DayKind, Stats, TaxOverview, WorkModel } from '#lib/types.js';
 	import LineChart from '#lib/charts/LineChart.svelte';
 	import ColumnChart from '#lib/charts/ColumnChart.svelte';
 	import ShareBar from '#lib/charts/ShareBar.svelte';
@@ -30,9 +30,18 @@
 	let stats = $state<Stats | null>(null);
 	let showTable = $state(false);
 
+	// Selectable years: from the first work model (at least the last three years) up to now
+	let firstYear = $state(year - 2);
+	api.get<WorkModel[]>('/work-models').then((models) => {
+		const first = Math.min(...models.map((w) => Number(w.valid_from.slice(0, 4))));
+		if (first < firstYear) firstYear = first;
+	});
+	const years = $derived(Array.from({ length: year - firstYear + 1 }, (_, i) => year - i));
+	const yearRange = (y: number) => ({ from: `${y}-01-01`, to: y === year ? today : `${y}-12-31` });
+
 	$effect(() => {
-		const p = presets.find((x) => x.key === preset)!;
-		api.get<Stats>('/stats', { from: p.from, to: p.to }).then((s) => (stats = s));
+		const range = preset.startsWith('y:') ? yearRange(Number(preset.slice(2))) : presets.find((x) => x.key === preset)!;
+		api.get<Stats>('/stats', { from: range.from, to: range.to }).then((s) => (stats = s));
 	});
 
 	let taxYear = $state(year);
@@ -116,6 +125,20 @@
 					onclick={() => (preset = p.key)}>{p.label()}</button
 				>
 			{/each}
+			<select
+				class="rounded-lg border-0 py-1.5 pr-7 pl-3 text-sm font-medium transition {preset.startsWith('y:')
+					? 'bg-brand-600 text-white'
+					: 'bg-transparent text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'}"
+				aria-label={m.range_year()}
+				value={preset.startsWith('y:') ? preset : ''}
+				onchange={(e) => {
+					const v = e.currentTarget.value;
+					if (v) [preset, taxYear] = [v, Number(v.slice(2))];
+				}}
+			>
+				<option value="" disabled>{m.range_year()}</option>
+				{#each years as y (y)}<option value="y:{y}">{y}</option>{/each}
+			</select>
 		</div>
 	</div>
 
@@ -270,7 +293,7 @@
 				</div>
 				<div class="flex items-center gap-2 print:hidden">
 					<select class="input w-auto py-1.5" bind:value={taxYear}>
-						{#each [year, year - 1, year - 2] as y (y)}<option value={y}>{y}</option>{/each}
+						{#each years as y (y)}<option value={y}>{y}</option>{/each}
 					</select>
 					<button class="btn-secondary py-1.5" onclick={() => window.print()}><Printer class="size-4" />{m.print()}</button>
 				</div>

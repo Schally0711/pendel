@@ -3,7 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import { m } from '#lib/paraglide/messages.js';
-	import { api } from '#lib/api.js';
+	import { api, isPublicPath } from '#lib/api.js';
 	import { auth } from '#lib/session.svelte.js';
 	import favicon from '#lib/assets/favicon.svg';
 	import { Clock, CalendarDays, ChartColumn, Palmtree, Settings, Users, LogOut } from '@lucide/svelte';
@@ -12,8 +12,7 @@
 
 	let { children }: LayoutProps = $props();
 
-	const PUBLIC = ['/login', '/setup', '/invite'];
-	const isPublic = $derived(PUBLIC.some((p) => page.url.pathname.startsWith(p)));
+	const isPublic = $derived(isPublicPath(page.url.pathname));
 	let ready = $state(false);
 
 	onMount(async () => {

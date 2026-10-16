@@ -81,7 +81,8 @@
 	// Live values between server refreshes
 	const working = $derived(!!today?.running_session && !today.running_break);
 	const liveExtra = $derived(working ? (now.getTime() - fetchedAt) / 60000 : 0);
-	const actual = $derived((today?.day.actual ?? 0) + liveExtra);
+	// seconds-exact base, so stopping and restarting doesn't drop the started minute
+	const actual = $derived((today?.actual_seconds ?? 0) / 60 + liveExtra);
 	const target = $derived(today?.day.target ?? 0);
 	const balance = $derived((today?.balance_before_today ?? 0) + actual - target);
 

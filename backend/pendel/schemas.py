@@ -280,6 +280,7 @@ class ReportOut(BaseModel):
 class TodayOut(BaseModel):
     now: datetime
     day: DayOut
+    actual_seconds: int  # today's credited work time without rounding to minutes
     running_session: SessionOut | None
     running_break: BreakOut | None
     running_commute: CommuteOut | None

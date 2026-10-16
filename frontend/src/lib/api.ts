@@ -1,5 +1,10 @@
 import { goto } from '$app/navigation';
 
+/** Routes that work without a login (the layout doesn't gate them, 401s don't redirect). */
+export const PUBLIC_ROUTES = ['/login', '/setup', '/invite'];
+
+export const isPublicPath = (path: string) => PUBLIC_ROUTES.some((p) => path.startsWith(p));
+
 export class ApiError extends Error {
 	constructor(
 		public status: number,
@@ -22,7 +27,7 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
 	const data = await res.json().catch(() => ({}));
 	if (!res.ok) {
 		const detail = typeof data.detail === 'string' ? data.detail : 'validation_error';
-		if (res.status === 401 && detail === 'not_authenticated') goto('/login');
+		if (res.status === 401 && detail === 'not_authenticated' && !isPublicPath(location.pathname)) goto('/login');
 		throw new ApiError(res.status, detail);
 	}
 	return data as T;

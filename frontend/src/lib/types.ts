@@ -124,6 +124,7 @@ export interface Report {
 export interface Today {
 	now: string;
 	day: Day;
+	actual_seconds: number;
 	running_session: WorkSession | null;
 	running_break: Break | null;
 	running_commute: Commute | null;

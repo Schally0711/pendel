@@ -74,7 +74,7 @@ def _mount_spa(app: FastAPI, static_dir: Path) -> None:
         return
     app.mount("/_app", StaticFiles(directory=static_dir / "_app"), name="assets")
 
-    @app.get("/{path:path}", include_in_schema=False)
+    @app.api_route("/{path:path}", methods=["GET", "HEAD"], include_in_schema=False)
     def spa(path: str) -> FileResponse:
         file = (static_dir / path).resolve()
         if not (path and file.is_file() and file.is_relative_to(static_dir.resolve())):
