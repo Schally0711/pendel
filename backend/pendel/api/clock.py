@@ -50,7 +50,9 @@ def today(user: CurrentUser, db: DB) -> TodayOut:
     session = running_session(db, user)
     brk = _running_break(session)
     commute = _running_commute(db, user)
-    before = balance(db, user, local - timedelta(days=1), now)
+    # balance() includes today's diff and adjustments booked for today
+    total = balance(db, user, local, now)
+    before = total - week[-1].result.diff
     return TodayOut(
         now=now,
         day=day_out(week[-1]),
@@ -58,8 +60,8 @@ def today(user: CurrentUser, db: DB) -> TodayOut:
         running_session=SessionOut.model_validate(session) if session else None,
         running_break=BreakOut.model_validate(brk) if brk else None,
         running_commute=CommuteOut.model_validate(commute) if commute else None,
-        balance=before + week[-1].result.diff,
-        balance_before_today=before,
+        balance=total,
+        balance_before_today=before,  # without today's work, so the UI can add live minutes
         week_actual=sum(d.result.actual for d in week),
         week_target=sum(d.result.target for d in week),
     )

@@ -127,3 +127,12 @@ def test_today_actual_seconds_survive_restart(admin):
     today = admin.get("/api/today").json()
     assert 40 <= today["actual_seconds"] <= 45
     assert today["day"]["actual"] == 1
+
+
+def test_today_balance_includes_adjustments_booked_today(admin):
+    today = admin.get("/api/today").json()
+    day = today["day"]["day"]
+    assert admin.post("/api/adjustments", json={"day": day, "minutes": 420}).status_code == 201
+    after = admin.get("/api/today").json()
+    assert after["balance"] == today["balance"] + 420
+    assert after["balance_before_today"] == today["balance_before_today"] + 420
