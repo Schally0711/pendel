@@ -70,3 +70,16 @@ def test_backup_before_migration(tmp_path, monkeypatch):
         db.get_engine().dispose()
         get_settings.cache_clear()
         db.get_engine.cache_clear()
+
+
+def test_cli_backup(client, tmp_path, capsys):
+    import sqlite3
+
+    from pendel.cli import main
+
+    assert main(["backup"]) == 0
+    path = capsys.readouterr().out.strip()
+    assert "/backups/pendel-manual-" in path
+    assert sqlite3.connect(path).execute("select count(*) from users").fetchone() == (0,)
+    target = tmp_path / "copy.db"
+    assert main(["backup", str(target)]) == 0 and target.exists()

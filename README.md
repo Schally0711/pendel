@@ -1,92 +1,116 @@
-# Pendel
+<p align="center"><img src="frontend/assets/icon.svg" width="88" alt="" /></p>
 
-Self-hosted work time tracking for people who split their week between **home office** and **office** – including automatic **commute tracking**.
+<h1 align="center">Pendel</h1>
 
-> 🚧 Early development – not usable yet.
+<p align="center">
+  Selbst gehostete Arbeitszeiterfassung für alle, die zwischen <b>Homeoffice</b> und <b>Büro</b> pendeln –
+  mit Gleitzeitkonto, Urlaubsplanung und automatischer Erfassung des Arbeitswegs.
+</p>
 
-## Planned features
+<p align="center">
+  <a href="https://github.com/Schally0711/pendel/actions/workflows/ci.yml"><img src="https://github.com/Schally0711/pendel/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
+  <img src="https://img.shields.io/badge/status-beta-orange" alt="Beta" />
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-blue" alt="AGPL-3.0" /></a>
+</p>
 
-- Start/stop/break tracking with a mobile-friendly PWA
-- Configurable work time models (weekly hours, flexitime) and public holidays per German state
-- Flexitime balance (overtime / undertime)
-- Time off: vacation ranges (weekends/holidays skipped), yearly vacation account with carry-over, sick days, child sick days, flex days, release, training, parental/unpaid leave
-- Commute tracking: automatic via Home Assistant zones, Android (Tasker, OwnTracks) or any webhook
-- Statistics: flexitime balance over time, hours per week/month vs. target, office/home share, working hours window,
-  commute by weekday; printable monthly time sheet (PDF via the browser) and CSV export
-- Tax overview per year (German commuter allowance and home office allowance)
-- iCal subscription for time off and public holidays
-- German and English UI
-- Single container with SQLite – easy to host
+<p align="center">
+  <img src="docs/images/today.png" width="49%" alt="Heute-Ansicht" />
+  <img src="docs/images/stats.png" width="49%" alt="Statistik" />
+</p>
 
-## Development
+> **Beta:** Pendel ist im Alltag im Einsatz, aber noch jung. Vor jedem Update, das die Datenbank ändert,
+> legt Pendel automatisch eine Sicherung an ([Update & Backup](docs/update-und-backup.md)).
 
-Requirements: Python ≥ 3.13, Node.js 24.
+**English:** Pendel is a self-hosted work time tracker for people who split their week between home office
+and office. It keeps a flexitime balance, plans vacation, follows German public holidays per state and can
+record commutes and office time automatically via Home Assistant, OwnTracks or any HTTP automation. It runs as
+a single Docker container with SQLite, is multi-user (invite only) and has a German and English UI.
+The documentation is in German; see the [English summary](#english-summary) below.
+
+## Funktionen
+
+- **Stempeln** per Web-App (PWA, installierbar auf Android/iOS): Homeoffice, Büro, Pause, Arbeitsweg, Feierabend –
+  auch über Schnellaktionen am App-Icon
+- **Arbeitszeitmodelle** mit Soll pro Wochentag, Gleitzeit, Pausenregeln (manuell oder automatischer Abzug)
+  und Prüfung der gesetzlichen Pausen und Höchstarbeitszeit (ArbZG)
+- **Gleitzeitkonto** mit Startsaldo, Korrekturen und Auszahlungen; mehrere **Arbeitsverhältnisse** mit jeweils eigenem Konto
+- **Abwesenheiten:** Urlaub (auch halbe Tage), Krankheit, Kind krank, Gleittag, Freistellung, Sonderurlaub,
+  Fortbildung, Elternzeit, unbezahlter Urlaub – mit Urlaubskonto, Resturlaub-Übertrag und Jahreskalender
+- **Feiertage** je Bundesland automatisch
+- **Automatische Erfassung** über [Home Assistant](https://github.com/Schally0711/pendel-homeassistant), OwnTracks,
+  iOS-Kurzbefehle, Tasker & Co.: Arbeitsweg, Bürozeit und Pausen aus Ortswechseln
+- **Statistik:** Gleitzeitverlauf, Ist/Soll pro Woche und Monat, Homeoffice-Anteil, Arbeitszeitfenster, Arbeitsweg
+- **Monatsbericht** zum Drucken bzw. als PDF, **CSV-Export**, **Steuerübersicht** (Entfernungspauschale, Homeoffice-Pauschale)
+- **Kalender-Abo** (iCal) für Abwesenheiten und Feiertage
+- **Mehrere Nutzer** per Einladungslink, Zwei-Faktor-Anmeldung (TOTP), Geräteübersicht
+- Deutsch und Englisch, heller und dunkler Modus, ein Container mit SQLite
+
+## Schnellstart mit Docker
+
+```yaml
+# compose.yaml
+services:
+  pendel:
+    image: ghcr.io/schally0711/pendel:0.9
+    container_name: pendel
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/data
+    environment:
+      TZ: Europe/Berlin
+```
 
 ```bash
-# Backend (http://127.0.0.1:8000, API docs at /api/docs)
-cd backend
-python3 -m venv .venv && .venv/bin/pip install -e '.[dev]'
-.venv/bin/uvicorn pendel.main:app --reload
-
-# Frontend (http://localhost:5173, proxies /api to the backend)
-cd frontend
-npm install
-npm run dev
+docker compose up -d
+docker logs pendel        # zeigt den Einrichtungscode für das erste Konto
 ```
 
-## Installation (Debian/Ubuntu, e.g. a Proxmox LXC)
+Dann `http://<server>:8000` öffnen, den Einrichtungscode eingeben und das Admin-Konto anlegen. Weitere Personen
+lädst du unter **Verwaltung** per Link ein. Für den Zugriff von unterwegs gehört Pendel hinter einen Reverse Proxy
+mit HTTPS oder einen Cloudflare Tunnel – siehe [Installation](docs/installation.md).
 
-```bash
-deploy/build-release.sh                 # on a build machine with Node 24 + Python ≥ 3.13
-# copy dist/pendel-<version>.tar.gz to the server, then as root:
-tar -xzf pendel-<version>.tar.gz && pendel-<version>/install.sh
-```
+Updates: `docker compose pull && docker compose up -d` – die Daten in `./data` bleiben erhalten.
 
-Runs as systemd service `pendel` on port 8000; data in `/var/lib/pendel`, settings in `/etc/pendel/pendel.env`.
-Put it behind an HTTPS reverse proxy and set `PENDEL_FORWARDED_ALLOW_IPS` to the proxy address.
-Re-running `install.sh` with a newer release updates in place; the database is migrated on startup.
-On first visit you create the admin account; further people join via invitation links.
+## Dokumentation
 
-Pendel is a PWA: on Android open it in Chrome and choose "Install app".
+| | |
+|---|---|
+| [Installation](docs/installation.md) | Docker, Reverse Proxy, Cloudflare Tunnel, ohne Docker, Einstellungen |
+| [Update & Backup](docs/update-und-backup.md) | Updates, automatische Sicherungen, Wiederherstellen, Zurück auf eine ältere Version |
+| [Bedienung](docs/bedienung.md) | Arbeitszeitmodell, Gleitzeit, Pausen, Abwesenheiten, Arbeitsverhältnisse, Statistik, Steuer |
+| [Automatisierung](docs/automatisierung.md) | Home Assistant, OwnTracks, Kurzbefehle/Tasker, API |
+| [Sicherheit & Datenschutz](docs/sicherheit-und-datenschutz.md) | Was gespeichert wird, Anmeldung, Empfehlungen |
+| [Entwicklung](docs/entwicklung.md) | Lokales Setup, Tests, Aufbau des Codes |
 
-## Reverse proxy, Cloudflare Tunnel, public address
+Sicherheitslücken bitte nicht als Issue, sondern wie in [SECURITY.md](SECURITY.md) beschrieben melden.
+Änderungen pro Version stehen im [CHANGELOG](CHANGELOG.md).
 
-Pendel can run behind any reverse proxy (nginx, Nginx Proxy Manager, Caddy, Traefik) or a Cloudflare Tunnel:
+<p align="center">
+  <img src="docs/images/mobile-today.png" width="24%" alt="Heute auf dem Handy" />
+  <img src="docs/images/absences.png" width="49%" alt="Abwesenheiten" />
+  <img src="docs/images/mobile-absences.png" width="24%" alt="Abwesenheiten auf dem Handy" />
+</p>
 
-- Point the proxy/tunnel at `http://<pendel-host>:8000`; HTTPS terminates at the proxy. Keep `PENDEL_SECURE_COOKIES=true`
-  (only set it to `false` for plain HTTP without TLS).
-- Set `PENDEL_FORWARDED_ALLOW_IPS` in `/etc/pendel/pendel.env` to the address(es) of your proxy/`cloudflared`
-  (comma separated) so login rate limiting and logs see the real client IP. Restart with `systemctl restart pendel`.
-- Enter the external address under **Admin → Instance → Public address** (or set `PENDEL_PUBLIC_URL`). Pendel uses it for
-  invitation links, the calendar subscription (incl. "Subscribe in Google Calendar") and the Home Assistant setup hint.
-- **Cloudflare Access:** browsers can log in through Access, but Home Assistant and calendar apps cannot. If you put
-  Access in front of Pendel, add a *Bypass* policy for `/api/*` – the API is protected by Pendel's own session/API tokens –
-  or at least for `/api/calendar.ics` and `/api/events`.
+## English summary
 
-## Automation (Home Assistant & co.)
+- **What:** self-hosted work time tracking (home office / office / commute), flexitime balance, vacation account,
+  public holidays per German state, statistics, printable monthly time sheet, CSV export, German tax overview, iCal feed, multi-user with invitations and TOTP.
+- **Install:** use the `compose.yaml` above (`ghcr.io/schally0711/pendel`, amd64 + arm64), run `docker logs pendel`
+  for the one-time setup code, open `http://<host>:8000`. Data lives in the `/data` volume (SQLite).
+  Put it behind an HTTPS reverse proxy or tunnel and set `PENDEL_FORWARDED_ALLOW_IPS` to the proxy address.
+- **Update:** `docker compose pull && docker compose up -d`. The schema is migrated on startup; a backup of the
+  database is written to `/data/backups` before every migration.
+- **Automation:** Home Assistant integration ([pendel-homeassistant](https://github.com/Schally0711/pendel-homeassistant), HACS),
+  OwnTracks (`POST /api/owntracks`, HTTP mode), or any HTTP client (`POST /api/events` with a Bearer token).
+  Interactive API docs at `/api/docs`.
+- **UI languages:** German and English (switch under *Account*).
 
-**Home Assistant:** use the integration [pendel-homeassistant](https://github.com/Schally0711/pendel-homeassistant) – setup via the UI, no YAML.
-Integrations can obtain a token with `POST /api/auth/token` (`email`, `password`, `name`).
+## Lizenz
 
-For other automations create an API token under *Settings → Integrations* (or on the server: `/opt/pendel/venv/bin/python -m pendel.cli create-token <email> <name>`),
-set the zone names of your places (e.g. home = `home`, office = `Work`), then send location events:
+[AGPL-3.0](LICENSE). Wer Pendel verändert und anderen als Dienst anbietet, muss den geänderten Quellcode
+ebenfalls bereitstellen.
 
-```http
-POST /api/events
-Authorization: Bearer <token>
-Content-Type: application/json
-
-{"type": "zone_change", "from": "home", "to": "not_home", "at": "2026-10-14T07:18:00+02:00"}
-```
-
-`zone_enter` / `zone_leave` with `"zone": "..."` work as well. Pendel derives commutes, office time and breaks
-(absences from the office up to 90 min = break, longer = work).
-
-## Container
-
-```bash
-podman build -t pendel -f Containerfile .
-podman run -p 8000:8000 -v pendel-data:/data pendel
-```
-
-Configuration via environment variables with prefix `PENDEL_` (see `backend/pendel/config.py`).
+Pendel ist keine Rechts- oder Steuerberatung. Die Berechnungen (Pausen nach ArbZG, Pauschalen) sind nach bestem
+Wissen umgesetzt, aber ohne Gewähr.

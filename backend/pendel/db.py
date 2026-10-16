@@ -104,17 +104,27 @@ def migrate() -> None:
 
 
 def backup_before_migration(engine: Engine) -> Path | None:
-    """Copy the SQLite database with the backup API (a plain file copy would miss the WAL)."""
+    from . import __version__
+
+    target = backup_database(engine, f"before-{__version__}")
+    if target is not None:
+        logging.getLogger("uvicorn.error").warning("Database backup before migration: %s", target)
+    return target
+
+
+def backup_database(engine: Engine, label: str, target: Path | None = None) -> Path | None:
+    """Consistent copy of the SQLite database via the backup API (a plain file copy would miss the
+    WAL). Default target: `<data dir>/backups/pendel-<label>-<timestamp>.db`; of the automatic
+    `before-*` backups only the newest BACKUPS_KEPT are kept."""
     if engine.dialect.name != "sqlite" or not engine.url.database:
         return None
     from datetime import UTC, datetime
 
-    from . import __version__
-
     folder = Path(engine.url.database).resolve().parent / "backups"
-    folder.mkdir(parents=True, exist_ok=True)
-    stamp = datetime.now(UTC).strftime("%Y%m%d-%H%M%S")
-    target = folder / f"pendel-before-{__version__}-{stamp}.db"
+    if target is None:
+        folder.mkdir(parents=True, exist_ok=True)
+        stamp = datetime.now(UTC).strftime("%Y%m%d-%H%M%S")
+        target = folder / f"pendel-{label}-{stamp}.db"
     source = sqlite3.connect(engine.url.database)
     dest = sqlite3.connect(target)
     try:
@@ -122,7 +132,8 @@ def backup_before_migration(engine: Engine) -> Path | None:
     finally:
         dest.close()
         source.close()
-    for old in sorted(folder.glob("pendel-before-*.db"), key=lambda f: f.stat().st_mtime)[:-BACKUPS_KEPT]:
-        old.unlink()
-    logging.getLogger("uvicorn.error").warning("Database backup before migration: %s", target)
+    if folder.is_dir():
+        automatic = sorted(folder.glob("pendel-before-*.db"), key=lambda f: f.stat().st_mtime)
+        for old in automatic[:-BACKUPS_KEPT]:
+            old.unlink()
     return target

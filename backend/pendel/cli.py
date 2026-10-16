@@ -1,16 +1,18 @@
 """Command line tools for administrators.
 
 python -m pendel.cli create-token <email> <name> [--out FILE]
+python -m pendel.cli backup [FILE]      (default: <data dir>/backups/pendel-manual-<time>.db)
 """
 
 import argparse
 import os
 import sys
+from pathlib import Path
 
 from sqlalchemy import select
 
 from .auth import new_token, normalize_email
-from .db import get_sessionmaker, migrate
+from .db import backup_database, get_engine, get_sessionmaker, migrate
 from .models import ApiToken, User
 
 
@@ -34,6 +36,15 @@ def create_token(email: str, name: str, out: str | None) -> int:
     return 0
 
 
+def backup(out: str | None) -> int:
+    target = backup_database(get_engine(), "manual", Path(out) if out else None)
+    if target is None:
+        print("backups are only supported for SQLite", file=sys.stderr)
+        return 1
+    print(target)
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="pendel")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -41,9 +52,15 @@ def main(argv: list[str] | None = None) -> int:
     ct.add_argument("email")
     ct.add_argument("name")
     ct.add_argument("--out", help="write the token to this file (mode 600) instead of stdout")
+    bk = sub.add_parser("backup", help="write a consistent copy of the database")
+    bk.add_argument(
+        "file", nargs="?", help="target file (default: <data dir>/backups/pendel-manual-<time>.db)"
+    )
     args = parser.parse_args(argv)
     if args.command == "create-token":
         return create_token(args.email, args.name, args.out)
+    if args.command == "backup":
+        return backup(args.file)
     return 2
 
 

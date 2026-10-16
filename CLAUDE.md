@@ -61,6 +61,9 @@ npm run build
 
 ## Conventions
 
+- User documentation lives in `docs/` (German; README German with an English summary). Keep it in sync with
+  behaviour changes; screenshots in `docs/images` are regenerated with `tools/screenshots.py` (made-up demo data).
+
 - Code, comments, commits and docs in English; every user-facing string goes through Paraglide (`m.<key>()`) with both `de` and `en` entries.
 - Settings come from env vars with prefix `PENDEL_` (`pendel/config.py`); DB access through the `get_db` dependency.
 - Tests use a temporary `PENDEL_DATA_DIR` (see `tests/conftest.py`) – never touch a real database.
