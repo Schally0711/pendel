@@ -1,0 +1,8 @@
+{
+	"$schema": "https://inlang.com/schema/inlang-message-format",
+	"language": "Sprache",
+	"welcome_title": "Willkommen bei Pendel",
+	"welcome_text": "Arbeitszeit erfassen – im Homeoffice, im Büro und auf dem Weg dazwischen.",
+	"backend_ok": "Backend erreichbar (Version {version})",
+	"backend_unreachable": "Backend nicht erreichbar"
+}
