@@ -1,13 +1,14 @@
-"""API tokens and the event webhook for automations (Home Assistant, Tasker, ...)."""
+"""API tokens and the event webhooks for automations (Home Assistant, OwnTracks, Shortcuts, Tasker, ...)."""
 
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
+from typing import Annotated, Any
 
-from fastapi import APIRouter, HTTPException, Request, status
+from fastapi import APIRouter, Body, HTTPException, Request, status
 from sqlalchemy import select
 
-from ..auth import DB, CurrentUser, login, new_token
+from ..auth import DB, BasicTokenUser, CurrentUser, login, new_token
 from ..automation import ZONE_ENTER, ZONE_LEAVE, expand_zone_change, process, recent_duplicate
-from ..models import ApiToken, Event, utcnow
+from ..models import ApiToken, Event, User, utcnow
 from ..schemas import EventIn, EventOut, EventResult, TokenCreate, TokenCreated, TokenLogin, TokenOut
 from .common import FromDate, ToDate, owned
 from .records import local_range
@@ -30,6 +31,13 @@ def receive_event(data: EventIn, request: Request, user: CurrentUser, db: DB) ->
             raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "zone_missing")
         parts = [(ZONE_ENTER if data.type == ZONE_ENTER else ZONE_LEAVE, data.zone)]
 
+    return EventResult(events=_record(db, user, request, parts, at, data.source))
+
+
+def _record(
+    db: DB, user: User, request: Request, parts: list[tuple[str, str]], at: datetime, source: str
+) -> list[EventOut]:
+    """Store zone events (skipping duplicates) and run them through the automation rules."""
     token = getattr(request.state, "api_token", None)
     out = []
     for type_, zone in parts:
@@ -41,13 +49,38 @@ def receive_event(data: EventIn, request: Request, user: CurrentUser, db: DB) ->
             type=type_,
             zone=zone,
             token_id=token.id if token else None,
-            payload={"source": data.source} if data.source else {},
+            payload={"source": source} if source else {},
         )
         db.add(event)
         db.flush()
         process(db, user, event)
         out.append(EventOut.model_validate(event))
-    return EventResult(events=out)
+    return out
+
+
+@router.post("/owntracks")
+def owntracks(request: Request, user: BasicTokenUser, db: DB, msg: Annotated[Any, Body()] = None) -> list:
+    """OwnTracks HTTP mode. Only region transitions are used; location fixes and all other
+    message types are acknowledged and dropped (no coordinates are stored).
+
+    OwnTracks expects `200` with a JSON array; anything else makes it retry, so old or
+    unusable messages are acknowledged too.
+    """
+    if not isinstance(msg, dict) or msg.get("_type") != "transition":
+        return []
+    event, region, tst = msg.get("event"), msg.get("desc"), msg.get("tst")
+    if event not in ("enter", "leave") or not isinstance(region, str) or not region.strip():
+        return []
+    now = utcnow()
+    try:
+        at = datetime.fromtimestamp(float(tst), UTC) if tst is not None else now
+    except (TypeError, ValueError, OverflowError):
+        at = now
+    if at > now + timedelta(minutes=5) or at < now - MAX_EVENT_AGE:
+        return []
+    type_ = ZONE_ENTER if event == "enter" else ZONE_LEAVE
+    _record(db, user, request, [(type_, region.strip()[:100])], at, "owntracks")
+    return []
 
 
 @router.get("/events")

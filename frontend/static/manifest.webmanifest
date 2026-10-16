@@ -16,7 +16,9 @@
 		{ "src": "/icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
 	],
 	"shortcuts": [
-		{ "name": "Heute", "short_name": "Heute", "url": "/", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] },
+		{ "name": "Homeoffice starten", "short_name": "Homeoffice", "url": "/?action=start_home", "icons": [{ "src": "/icons/shortcut-home.png", "sizes": "96x96" }] },
+		{ "name": "Im Büro starten", "short_name": "Büro", "url": "/?action=start_office", "icons": [{ "src": "/icons/shortcut-office.png", "sizes": "96x96" }] },
+		{ "name": "Feierabend", "short_name": "Feierabend", "url": "/?action=stop", "icons": [{ "src": "/icons/shortcut-stop.png", "sizes": "96x96" }] },
 		{ "name": "Verlauf", "short_name": "Verlauf", "url": "/history", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] }
 	]
 }

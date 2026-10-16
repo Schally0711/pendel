@@ -15,7 +15,9 @@ const KNOWN: Record<string, () => string> = {
 	employment_open_not_last: m.employment_open_not_last,
 	employment_end_before_start: m.employment_end_before_start,
 	employment_invalid_end: m.employment_invalid_end,
-	employment_still_active: m.employment_still_active
+	employment_still_active: m.employment_still_active,
+	session_running: m.session_running,
+	no_session_running: m.no_session_running
 };
 
 export function errorText(e: unknown): string {

@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { goto } from '$app/navigation';
+	import { page } from '$app/state';
 	import { m } from '#lib/paraglide/messages.js';
 	import { getLocale } from '#lib/paraglide/runtime.js';
 	import { api } from '#lib/api.js';
@@ -33,6 +35,7 @@
 	let now = $state(new Date());
 	let busy = $state(false);
 	let error = $state<string | null>(null);
+	let notice = $state<string | null>(null);
 
 	const tz = $derived(auth.tz);
 
@@ -50,7 +53,7 @@
 	}
 
 	onMount(() => {
-		load();
+		load().then(runShortcut);
 		const tick = setInterval(() => (now = new Date()), 1000);
 		const refresh = setInterval(load, 60_000);
 		const onVisible = () => document.visibilityState === 'visible' && load();
@@ -62,17 +65,34 @@
 		};
 	});
 
-	async function act(path: string, body: object = {}) {
+	async function act(path: string, body: object = {}): Promise<boolean> {
 		busy = true;
 		error = null;
+		notice = null;
 		try {
 			await api.post(path, body);
 			await load();
+			return true;
 		} catch (e) {
 			error = errorText(e);
+			return false;
 		} finally {
 			busy = false;
 		}
+	}
+
+	// App icon shortcuts (manifest) open /?action=...; run it once, then drop it from the URL
+	async function runShortcut() {
+		const action = page.url.searchParams.get('action');
+		if (!action) return;
+		await goto('/', { replaceState: true });
+		const run: Record<string, [() => Promise<boolean>, () => string]> = {
+			start_home: [() => startWork('home'), m.action_start_home],
+			start_office: [() => startWork('office'), m.action_start_office],
+			stop: [() => act('/clock/stop'), m.action_stop]
+		};
+		const entry = run[action];
+		if (entry && (await entry[0]())) notice = m.shortcut_done({ action: entry[1]() });
 	}
 
 	const placeOf = (kind: PlaceKind) => places.find((p) => p.kind === kind && !p.archived)?.id ?? null;
@@ -290,6 +310,7 @@
 						</button>
 					{/if}
 					<Alert message={error} />
+					<Alert message={notice} tone="success" />
 				</div>
 			</section>
 

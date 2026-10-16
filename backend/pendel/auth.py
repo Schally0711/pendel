@@ -1,5 +1,6 @@
 """Password hashing, login sessions, API tokens and the FastAPI auth dependencies."""
 
+import base64
 import hashlib
 import secrets
 import time
@@ -186,17 +187,49 @@ def _user_from_cookie(db: Session, request: Request) -> User | None:
     return db.get(User, session.user_id)
 
 
+def api_token(db: Session, raw: str) -> ApiToken | None:
+    """Active full-scope API token for a raw token string (marks it as used)."""
+    row = db.scalar(select(ApiToken).where(ApiToken.token_hash == hash_token(raw.strip())))
+    if row is None or row.revoked_at is not None or row.scope != "full":
+        return None
+    row.last_used_at = utcnow()
+    db.commit()
+    return row
+
+
 def _token_from_header(db: Session, request: Request) -> ApiToken | None:
     header = request.headers.get("authorization", "")
     scheme, _, token = header.partition(" ")
     if scheme.lower() != "bearer" or not token:
         return None
-    api_token = db.scalar(select(ApiToken).where(ApiToken.token_hash == hash_token(token.strip())))
-    if api_token is None or api_token.revoked_at is not None or api_token.scope != "full":
-        return None
-    api_token.last_used_at = utcnow()
-    db.commit()
-    return api_token
+    return api_token(db, token)
+
+
+def basic_token_user(request: Request, db: Annotated[Session, Depends(get_db)]) -> User:
+    """User for apps that only support HTTP Basic auth (OwnTracks): the password is an API token,
+    the user name is ignored. Bearer tokens work as well."""
+    header = request.headers.get("authorization", "")
+    scheme, _, value = header.partition(" ")
+    row = None
+    if scheme.lower() == "basic" and value:
+        try:
+            _name, _, password = base64.b64decode(value.strip()).decode().partition(":")
+        except (ValueError, UnicodeDecodeError):
+            password = ""
+        row = api_token(db, password) if password else None
+    elif scheme.lower() == "bearer" and value:
+        row = api_token(db, value)
+    if row is None:
+        raise HTTPException(
+            status.HTTP_401_UNAUTHORIZED,
+            "not_authenticated",
+            headers={"WWW-Authenticate": 'Basic realm="Pendel"'},
+        )
+    request.state.api_token = row
+    user = db.get(User, row.user_id)
+    if user is None:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "not_authenticated")
+    return user
 
 
 def current_user(request: Request, db: Annotated[Session, Depends(get_db)]) -> User:
@@ -217,6 +250,7 @@ def admin_user(user: Annotated[User, Depends(current_user)]) -> User:
 
 
 CurrentUser = Annotated[User, Depends(current_user)]
+BasicTokenUser = Annotated[User, Depends(basic_token_user)]
 AdminUser = Annotated[User, Depends(admin_user)]
 DB = Annotated[Session, Depends(get_db)]
 
